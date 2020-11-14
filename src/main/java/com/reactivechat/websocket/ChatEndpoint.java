@@ -6,12 +6,15 @@ import com.reactivechat.model.Destination.DestinationType;
 import com.reactivechat.model.Message;
 import com.reactivechat.model.User;
 import com.reactivechat.repository.SessionsRepository;
-import com.reactivechat.repository.SessionsRepositoryImpl;
 import com.reactivechat.repository.UsersRepository;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.MessageHandler.Whole;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
+import javax.websocket.RemoteEndpoint;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
@@ -26,21 +29,25 @@ import static com.reactivechat.model.Users.CHAT_SERVER;
     decoders = MessageDecoder.class,
     encoders = MessageEncoder.class
 )
-public class ChatEndpoint {
+public class ChatEndpoint { // extends Endpoint
     
-    private final UsersRepository usersRepository;
-    private final SessionsRepository sessionsRepository;
-    private final MessageBroadcasterController broadcasterController;
+    private UsersRepository usersRepository;
+    private SessionsRepository sessionsRepository;
+    private MessageBroadcasterController broadcasterController;
     
     @Autowired
     public ChatEndpoint(final UsersRepository usersRepository,
-                        final SessionsRepositoryImpl sessionsRepository,
+                        final SessionsRepository sessionsRepository,
                         final MessageBroadcasterController broadcasterController) {
         
         this.usersRepository = usersRepository;
         this.sessionsRepository = sessionsRepository;
         this.broadcasterController = broadcasterController;
     }
+    
+/*    public ChatEndpoint() {
+        // Needed for jetty initialization
+    }*/
     
     @OnOpen
     public void onOpen(final Session session, @PathParam("userId") final String userId) {
@@ -52,6 +59,22 @@ public class ChatEndpoint {
         
         broadcasterController.broadcastToSession(session, message);
     }
+    
+/*    @Override
+    public void onOpen(Session session, EndpointConfig endpointConfig) {
+    
+        RemoteEndpoint remote = session.getBasicRemote();
+        session.addMessageHandler(new Whole<Message>() {
+            
+            @Override
+            public void onMessage(Message message) {
+                ChatEndpoint.this.onMessage(session, message);
+            }
+            
+        });
+    
+    
+    }*/
 
     @OnMessage
     public void onMessage(final Session session, final Message message) {
@@ -80,7 +103,7 @@ public class ChatEndpoint {
         broadcasterController.broadcastToSession(session, message);
         sessionsRepository.delete(user, session);
     }
-
+    
     @OnError
     public void onError(Session session, Throwable throwable) {
         // Do error handling here

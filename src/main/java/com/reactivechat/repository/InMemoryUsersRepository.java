@@ -1,9 +1,11 @@
 package com.reactivechat.repository;
 
 import com.reactivechat.model.User;
+import com.reactivechat.model.Users;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -13,6 +15,13 @@ public class InMemoryUsersRepository implements UsersRepository {
     
     public InMemoryUsersRepository() {
         this.idToUsersMap = new HashMap<>();
+    
+        // TODO: temporary till user creation is finished
+        Stream.of(Users.values())
+            .forEach(user -> {
+                idToUsersMap.put(user.getId(), user.getUser());
+            });
+
     }
     
     public User create(final User user) {

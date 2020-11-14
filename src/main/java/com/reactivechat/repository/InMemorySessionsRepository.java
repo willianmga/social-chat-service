@@ -11,12 +11,12 @@ import javax.websocket.Session;
 import org.springframework.stereotype.Component;
 
 @Component
-public class SessionsRepositoryImpl implements SessionsRepository {
+public class InMemorySessionsRepository implements SessionsRepository {
     
     private final Map<String, User> sessionIdToUserMap;
     private final Map<User, List<Session>> userToSessionsMap;
     
-    public SessionsRepositoryImpl() {
+    public InMemorySessionsRepository() {
         this.userToSessionsMap = new HashMap<>();
         this.sessionIdToUserMap = new HashMap<>();
     }

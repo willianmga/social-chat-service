@@ -5,7 +5,7 @@ import com.reactivechat.model.Destination;
 import com.reactivechat.model.Destination.DestinationType;
 import com.reactivechat.model.Message;
 import com.reactivechat.model.User;
-import com.reactivechat.repository.SessionsRepositoryImpl;
+import com.reactivechat.repository.InMemorySessionsRepository;
 import com.reactivechat.repository.UsersRepository;
 import java.io.IOException;
 import java.util.Collections;
@@ -23,10 +23,10 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageBroadcasterControllerImpl.class);
     
     private final UsersRepository usersRepository;
-    private final SessionsRepositoryImpl sessionsRepository;
+    private final InMemorySessionsRepository sessionsRepository;
     
     @Autowired
-    public MessageBroadcasterControllerImpl(final UsersRepository usersRepository, final SessionsRepositoryImpl sessionsRepository) {
+    public MessageBroadcasterControllerImpl(final UsersRepository usersRepository, final InMemorySessionsRepository sessionsRepository) {
         this.usersRepository = usersRepository;
         this.sessionsRepository = sessionsRepository;
     }
@@ -38,9 +38,10 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
         if (DestinationType.USER.equals(destination.getDestinationType())) {
             final User user = usersRepository.findById(destination.getDestinationId());
             broadcastToUser(user, message);
+        } else {
+            LOGGER.error("Failed to deliver message to destination type " + destination.getDestinationType());
         }
     
-        LOGGER.error("Failed to deliver message to destination type " + destination.getDestinationType());
     }
     
     @Override

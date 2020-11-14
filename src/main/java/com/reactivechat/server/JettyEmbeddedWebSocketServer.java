@@ -1,12 +1,20 @@
 package com.reactivechat.server;
 
 import com.reactivechat.websocket.ChatEndpoint;
+import javax.websocket.server.ServerEndpointConfig;
+import javax.websocket.server.ServerEndpointConfig.Builder;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.websocket.jsr356.server.deploy.WebSocketServerContainerInitializer;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+@Component
 public class JettyEmbeddedWebSocketServer {
+    
+    @Autowired
+    private Configurator configurator;
     
     public void start() {
     
@@ -34,9 +42,17 @@ public class JettyEmbeddedWebSocketServer {
                     wsContainer.setDefaultMaxTextMessageBufferSize(65535);
                 
                     // Add WebSocket endpoint to javax.websocket layer
-                    wsContainer.addEndpoint(ChatEndpoint.class);
+                    
+                    ServerEndpointConfig serverEndpointConfig = Builder
+                        .create(ChatEndpoint.class, "/chat/{userId}")
+                        .configurator(configurator)
+                        .build();
+                    
+                    wsContainer.addEndpoint(serverEndpointConfig);
                 });
-        
+    
+
+    
             server.start();
             server.join();
         } catch (Throwable t) {
