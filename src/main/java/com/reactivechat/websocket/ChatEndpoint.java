@@ -1,11 +1,13 @@
 package com.reactivechat.websocket;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
-
-import javax.websocket.EncodeException;
+import com.reactivechat.controller.MessageBroadcasterController;
+import com.reactivechat.model.Destination;
+import com.reactivechat.model.Destination.DestinationType;
+import com.reactivechat.model.Message;
+import com.reactivechat.model.User;
+import com.reactivechat.repository.SessionsRepository;
+import com.reactivechat.repository.SessionsRepositoryImpl;
+import com.reactivechat.repository.UsersRepository;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
@@ -13,59 +15,89 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-import com.reactivechat.model.Message;
+import static com.reactivechat.model.Users.CHAT_SERVER;
 
-@ServerEndpoint(value = "/chat/{username}", decoders = MessageDecoder.class, encoders = MessageEncoder.class)
+@Component
+@ServerEndpoint(
+    value = "/chat/{userId}",
+    decoders = MessageDecoder.class,
+    encoders = MessageEncoder.class
+)
 public class ChatEndpoint {
-    private Session session;
-    private static final Set<ChatEndpoint> chatEndpoints = new CopyOnWriteArraySet<>();
-    private static HashMap<String, String> users = new HashMap<>();
-
+    
+    private final UsersRepository usersRepository;
+    private final SessionsRepository sessionsRepository;
+    private final MessageBroadcasterController broadcasterController;
+    
+    @Autowired
+    public ChatEndpoint(final UsersRepository usersRepository,
+                        final SessionsRepositoryImpl sessionsRepository,
+                        final MessageBroadcasterController broadcasterController) {
+        
+        this.usersRepository = usersRepository;
+        this.sessionsRepository = sessionsRepository;
+        this.broadcasterController = broadcasterController;
+    }
+    
     @OnOpen
-    public void onOpen(Session session, @PathParam("username") String username) throws IOException, EncodeException {
+    public void onOpen(final Session session, @PathParam("userId") final String userId) {
+    
+        final User user = usersRepository.findById(userId);
+        sessionsRepository.create(user, session);
 
-        this.session = session;
-        chatEndpoints.add(this);
-        users.put(session.getId(), username);
-
-        Message message = new Message();
-        message.setFrom(username);
-        message.setContent("Connected!");
-        broadcast(message);
+        final Message message = chatServerMessage(user, "Connected!");
+        
+        broadcasterController.broadcastToSession(session, message);
     }
 
     @OnMessage
-    public void onMessage(Session session, Message message) throws IOException, EncodeException {
-        message.setFrom(users.get(session.getId()));
-        broadcast(message);
+    public void onMessage(final Session session, final Message message) {
+    
+        final User user = sessionsRepository.findBySession(session);
+    
+        final Message newMessage = Message.newBuilder()
+            .from(user.getId())
+            .destination(Destination.builder()
+                .destinationType(DestinationType.USER)
+                .destinationId(user.getId())
+                .build()
+            )
+            .message(message.getMessage())
+            .build();
+
+        broadcasterController.broadcast(newMessage);
     }
 
     @OnClose
-    public void onClose(Session session) throws IOException, EncodeException {
-        chatEndpoints.remove(this);
-        Message message = new Message();
-        message.setFrom(users.get(session.getId()));
-        message.setContent("Disconnected!");
-        broadcast(message);
+    public void onClose(final Session session) {
+        
+        final User user = sessionsRepository.findBySession(session);
+        final Message message = chatServerMessage(user, "Disconnected!");
+    
+        broadcasterController.broadcastToSession(session, message);
+        sessionsRepository.delete(user, session);
     }
 
     @OnError
     public void onError(Session session, Throwable throwable) {
         // Do error handling here
     }
+    
+    private Message chatServerMessage(final User destinationUser, final String message) {
+        
+        return Message.newBuilder()
+            .from(CHAT_SERVER.getId())
+            .destination(Destination.builder()
+                .destinationType(DestinationType.USER)
+                .destinationId(destinationUser.getId())
+                .build()
+            )
+            .message(message)
+            .build();
 
-    private static void broadcast(Message message) throws IOException, EncodeException {
-        chatEndpoints.forEach(endpoint -> {
-            synchronized (endpoint) {
-                try {
-                    endpoint.session.getBasicRemote()
-                        .sendObject(message);
-                } catch (IOException | EncodeException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
     }
 
 }

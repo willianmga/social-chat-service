@@ -1,13 +1,18 @@
 package com.reactivechat;
 
-import org.springframework.boot.SpringApplication;
+import com.reactivechat.server.JettyEmbeddedWebSocketServer;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 
 @SpringBootApplication
 public class App {
     
     public static void main(String[] args) {
-        SpringApplication.run(App.class, args);
+        new SpringApplicationBuilder(App.class)
+            .web(false)
+            .run(args);
+    
+        new JettyEmbeddedWebSocketServer().start();
     }
 
 }

@@ -1,36 +1,29 @@
 package com.reactivechat.model;
 
+import java.time.OffsetDateTime;
+import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.ToString;
+
+@Getter
+@Builder
+@ToString
+@AllArgsConstructor
 public class Message {
-    private String from;
-    private String to;
-    private String content;
+    
+    private final String id;
+    private final String from;
+    private final Destination destination;
+    private final String message;
+    private final OffsetDateTime date;
 
-    @Override
-    public String toString() {
-        return super.toString();
+    public static MessageBuilder newBuilder() {
+        
+        return Message.builder()
+            .id(UUID.randomUUID().toString());
+        
     }
-
-    public String getFrom() {
-        return from;
-    }
-
-    public void setFrom(String from) {
-        this.from = from;
-    }
-
-    public String getTo() {
-        return to;
-    }
-
-    public void setTo(String to) {
-        this.to = to;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
+    
 }
