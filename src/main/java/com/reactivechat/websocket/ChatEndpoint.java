@@ -7,17 +7,15 @@ import com.reactivechat.model.Message;
 import com.reactivechat.model.User;
 import com.reactivechat.repository.SessionsRepository;
 import com.reactivechat.repository.UsersRepository;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler.Whole;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
-import javax.websocket.RemoteEndpoint;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -29,25 +27,23 @@ import static com.reactivechat.model.Users.CHAT_SERVER;
     decoders = MessageDecoder.class,
     encoders = MessageEncoder.class
 )
-public class ChatEndpoint { // extends Endpoint
+public class ChatEndpoint {
     
-    private UsersRepository usersRepository;
-    private SessionsRepository sessionsRepository;
-    private MessageBroadcasterController broadcasterController;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChatEndpoint.class);
+    
+    private final UsersRepository usersRepository;
+    private final SessionsRepository sessionsRepository;
+    private final MessageBroadcasterController broadcasterController;
     
     @Autowired
     public ChatEndpoint(final UsersRepository usersRepository,
                         final SessionsRepository sessionsRepository,
                         final MessageBroadcasterController broadcasterController) {
-        
+    
         this.usersRepository = usersRepository;
         this.sessionsRepository = sessionsRepository;
         this.broadcasterController = broadcasterController;
     }
-    
-/*    public ChatEndpoint() {
-        // Needed for jetty initialization
-    }*/
     
     @OnOpen
     public void onOpen(final Session session, @PathParam("userId") final String userId) {
@@ -58,23 +54,9 @@ public class ChatEndpoint { // extends Endpoint
         final Message message = chatServerMessage(user, "Connected!");
         
         broadcasterController.broadcastToSession(session, message);
+    
+        LOGGER.info("New session created: {}", session.getId());
     }
-    
-/*    @Override
-    public void onOpen(Session session, EndpointConfig endpointConfig) {
-    
-        RemoteEndpoint remote = session.getBasicRemote();
-        session.addMessageHandler(new Whole<Message>() {
-            
-            @Override
-            public void onMessage(Message message) {
-                ChatEndpoint.this.onMessage(session, message);
-            }
-            
-        });
-    
-    
-    }*/
 
     @OnMessage
     public void onMessage(final Session session, final Message message) {
@@ -84,14 +66,16 @@ public class ChatEndpoint { // extends Endpoint
         final Message newMessage = Message.newBuilder()
             .from(user.getId())
             .destination(Destination.builder()
-                .destinationType(DestinationType.USER)
-                .destinationId(user.getId())
+                .destinationType(message.getDestination().getDestinationType())
+                .destinationId(message.getDestination().getDestinationId())
                 .build()
             )
             .message(message.getMessage())
             .build();
 
         broadcasterController.broadcast(newMessage);
+    
+        LOGGER.info("Messaged received from session {}", session.getId());
     }
 
     @OnClose
@@ -102,11 +86,13 @@ public class ChatEndpoint { // extends Endpoint
     
         broadcasterController.broadcastToSession(session, message);
         sessionsRepository.delete(user, session);
+    
+        LOGGER.info("Session {} finished gracefully", session.getId());
     }
     
     @OnError
     public void onError(Session session, Throwable throwable) {
-        // Do error handling here
+        LOGGER.error("Error occurred during session {}. Reason {}", session.getId(), throwable.getMessage());
     }
     
     private Message chatServerMessage(final User destinationUser, final String message) {
