@@ -58,13 +58,7 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
     
     @Override
     public void broadcastToSession(final Session session, final Message message) {
-        
-        try {
-            broadcastMessageToSessions(Collections.singletonList(session), message);
-        } catch (ChatException e) {
-            LOGGER.error("Failed to deliver message to session " + session.getId() + ". Reason: " + e.getMessage());
-        }
-        
+        broadcastMessageToSessions(Collections.singletonList(session), message);
     }
     
     private void broadcastMessageToSessions(final List<Session> sessions, final Message message) throws ChatException {

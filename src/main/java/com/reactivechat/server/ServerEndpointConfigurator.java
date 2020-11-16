@@ -6,12 +6,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-public class Configurator extends ServerEndpointConfig.Configurator {
+public class ServerEndpointConfigurator extends ServerEndpointConfig.Configurator {
     
     private final ChatEndpoint chatEndpoint;
 
     @Autowired
-    public Configurator(final ChatEndpoint chatEndpoint) {
+    public ServerEndpointConfigurator(final ChatEndpoint chatEndpoint) {
         this.chatEndpoint = chatEndpoint;
     }
     
