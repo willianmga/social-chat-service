@@ -3,8 +3,10 @@ package com.reactivechat.repository;
 import com.reactivechat.model.User;
 import com.reactivechat.model.Users;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
@@ -51,6 +53,17 @@ public class InMemoryUsersRepository implements UsersRepository {
         }
     
         return user;
+    }
+    
+    @Override
+    public List<User> findContacts(User user) {
+        
+        return idToUsersMap
+            .values()
+            .stream()
+            .filter(usr -> !usr.equals(user))
+            .collect(Collectors.toList());
+        
     }
     
 }

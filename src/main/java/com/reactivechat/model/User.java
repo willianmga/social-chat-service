@@ -16,6 +16,7 @@ public class User {
     private final String username;
     private final String name;
     private final String avatar;
+    private final String status;
     
     @Override
     public boolean equals(Object o) {

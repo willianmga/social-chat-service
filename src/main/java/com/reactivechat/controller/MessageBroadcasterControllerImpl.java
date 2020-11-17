@@ -7,10 +7,8 @@ import com.reactivechat.model.Message;
 import com.reactivechat.model.User;
 import com.reactivechat.repository.SessionsRepository;
 import com.reactivechat.repository.UsersRepository;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import javax.websocket.EncodeException;
 import javax.websocket.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,10 +66,8 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
     
                 try {
                     session.getBasicRemote().sendObject(message);
-                } catch (IOException e) {
-                    throw new ChatException("Failed to send message to session " + session.getId());
-                } catch (EncodeException e) {
-                    throw new ChatException("Failed to encode message to session " + session.getId());
+                } catch (Exception e) {
+                    throw new ChatException("Error occurred while sending message of session " + session.getId() + ": " + e.getMessage());
                 }
                 
             });
