@@ -1,13 +1,15 @@
 package com.reactivechat.repository;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reactivechat.model.User;
-import com.reactivechat.model.Users;
-import java.util.HashMap;
+import java.io.IOException;
+import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,14 +18,17 @@ public class InMemoryUsersRepository implements UsersRepository {
     private final Map<String, User> idToUsersMap;
     
     public InMemoryUsersRepository() {
-        this.idToUsersMap = new HashMap<>();
     
         // TODO: temporary till user creation is finished
-        Stream.of(Users.values())
-            .forEach(user -> {
-                idToUsersMap.put(user.getId(), user.getUser());
-            });
-
+        this.idToUsersMap = readDummyUsers()
+            .stream()
+            .collect(Collectors.toMap(
+                User::getId,
+                user -> user,
+                (a, b) -> a,
+                ConcurrentHashMap::new
+            ));
+        
     }
     
     public User create(final User user) {
@@ -63,6 +68,21 @@ public class InMemoryUsersRepository implements UsersRepository {
             .stream()
             .filter(usr -> !usr.equals(user))
             .collect(Collectors.toList());
+        
+    }
+    
+    private static List<User> readDummyUsers() {
+        
+        try {
+            
+            URL resource = InMemoryUsersRepository.class.getClassLoader().getResource("dummy-users.json");
+            TypeReference<List<User>> typeReference = new TypeReference<List<User>>() {};
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readValue(resource, typeReference);
+            
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read dummy users for server");
+        }
         
     }
     
