@@ -49,8 +49,6 @@
             <artifactId>javax-websocket-server-impl</artifactId>
             <version>${jetty.version}</version>
         </dependency>
-
-
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>

@@ -1,9 +1,10 @@
 package com.reactivechat.controller;
 
-import com.reactivechat.model.Destination;
-import com.reactivechat.model.Destination.DestinationType;
-import com.reactivechat.model.Message;
 import com.reactivechat.model.User;
+import com.reactivechat.model.message.ChatMessage;
+import com.reactivechat.model.message.ChatMessage.DestinationType;
+import com.reactivechat.model.message.Message;
+import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.repository.SessionsRepository;
 import com.reactivechat.repository.UsersRepository;
 import java.util.Collections;
@@ -29,21 +30,23 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
         this.sessionsRepository = sessionsRepository;
     }
     
-    public void broadcast(final Session session, final Message message) {
-    
-        final Destination destination = message.getDestination();
+    @Override
+    public void broadcastChatMessage(final Session session,
+                                     final ResponseMessage<ChatMessage> message) {
         
-        if (DestinationType.USER.equals(destination.getDestinationType())) {
+        final DestinationType destinationType = message.getPayload().getDestinationType();
+        
+        if (DestinationType.USER.equals(destinationType)) {
             
-            final User user = usersRepository.findById(destination.getDestinationId());
+            final User user = usersRepository.findById(message.getPayload().getDestinationId());
             broadcastToUser(user, message);
             
-        } else if (DestinationType.ALL_USERS_GROUP.equals(destination.getDestinationType())) {
+        } else if (DestinationType.ALL_USERS_GROUP.equals(destinationType)) {
 
             broadcastToAllExceptSession(session, message);
             
         } else {
-            LOGGER.error("Failed to deliver message to destination type " + destination.getDestinationType());
+            LOGGER.error("Failed to deliver message to destination type " + destinationType);
         }
     
     }
@@ -76,13 +79,15 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
     
         sessions
             .forEach(session -> {
-    
                 try {
-                    session.getBasicRemote().sendObject(message);
+                    if (session.isOpen()) {
+                        session.getBasicRemote().sendObject(message);
+                    } else {
+                        LOGGER.error("Can't send message to session {} because session is not opened" + session.getId());
+                    }
                 } catch (Exception e) {
                     LOGGER.error("Error occurred while sending message to session " + session.getId() + ": " + e.getMessage());
                 }
-                
             });
      
     }

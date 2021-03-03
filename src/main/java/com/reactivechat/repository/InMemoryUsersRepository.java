@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -58,6 +59,15 @@ public class InMemoryUsersRepository implements UsersRepository {
         }
     
         return user;
+    }
+    
+    @Override
+    public Optional<User> findByUsername(String username) {
+        return idToUsersMap
+            .values()
+            .stream()
+            .filter(user -> user.getUsername().equals(username))
+            .findFirst();
     }
     
     @Override

@@ -16,10 +16,12 @@ public class InMemorySessionsRepository implements SessionsRepository {
     
     private final Map<String, User> sessionIdToUserMap;
     private final Map<User, List<Session>> userToSessionsMap;
+    private final Map<String, String> authenticatedSessionsMap;
     
     public InMemorySessionsRepository() {
         this.userToSessionsMap = new HashMap<>();
         this.sessionIdToUserMap = new HashMap<>();
+        this.authenticatedSessionsMap = new HashMap<>();
     }
     
     public void create(final User user, final Session session) {
@@ -33,10 +35,43 @@ public class InMemorySessionsRepository implements SessionsRepository {
     }
     
     @Override
+    public void authenticate(Session session, String token) {
+    
+        if (authenticatedSessionsMap.get(token) == null) {
+            authenticatedSessionsMap.put(token, session.getId());
+        }
+        
+        throw new ChatException("Failed to authenticate session: Token is already in use by another session");
+    }
+    
+    @Override
+    public boolean sessionIsAuthenticated(final Session session,
+                                          final String token) {
+    
+        final String sessionId = authenticatedSessionsMap.get(token);
+        
+        if (sessionId != null && !sessionId.isEmpty()) {
+            return  sessionId.equals(session.getId());
+        }
+        
+        return false;
+    }
+    
+    
+    @Override
     public void delete(final User user, Session session) {
         
         sessionIdToUserMap.remove(session.getId());
-    
+        
+        authenticatedSessionsMap
+            .entrySet()
+            .stream()
+            .filter(entry -> entry.getValue().equals(session.getId()))
+            .findFirst()
+            .ifPresent(entry -> {
+                authenticatedSessionsMap.remove(entry.getKey());
+            });
+        
         final List<Session> remainingSessions = userToSessionsMap.getOrDefault(user, new ArrayList<>())
             .stream()
             .filter(loggedSession -> !loggedSession.getId().equals(session.getId()))

@@ -17,6 +17,7 @@ public class User implements Contact {
     private final String name;
     private final String avatar;
     private final String description;
+    
     private final ContactType contactType;
     
     @Override

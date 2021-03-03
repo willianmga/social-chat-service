@@ -12,22 +12,10 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.eclipse.jetty.websocket.jsr356.server.deploy.WebSocketServerContainerInitializer;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
-@Component
 public class JettyEmbeddedWebSocketServer {
     
-    private static final int SERVER_PORT;
-    
-    static {
-    
-        String portEnv = System.getenv("PORT");
-    
-        SERVER_PORT = (portEnv != null && !portEnv.isEmpty())
-            ? Integer.parseInt(portEnv)
-            : 8080;
-
-    }
+    private static final int DEFAULT_SERVER_PORT = 8080;
     
     @Autowired
     private ServerEndpointConfigurator serverEndpointConfigurator;
@@ -36,7 +24,7 @@ public class JettyEmbeddedWebSocketServer {
     
         Server server = new Server();
         ServerConnector connector = new ServerConnector(server);
-        connector.setPort(SERVER_PORT);
+        connector.setPort(getServerPort());
         server.addConnector(connector);
 
         ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
@@ -71,6 +59,13 @@ public class JettyEmbeddedWebSocketServer {
             t.printStackTrace(System.err);
         }
         
+    }
+    
+    private int getServerPort() {
+        String portEnv = System.getenv("PORT");
+        return (portEnv != null && !portEnv.isEmpty())
+            ? Integer.parseInt(portEnv)
+            : DEFAULT_SERVER_PORT;
     }
     
 }

@@ -1,18 +1,17 @@
 package com.reactivechat.websocket;
 
+import com.google.gson.Gson;
+import com.reactivechat.model.message.RequestMessage;
 import javax.websocket.EncodeException;
 import javax.websocket.Encoder;
 import javax.websocket.EndpointConfig;
 
-import com.reactivechat.model.Message;
-import com.google.gson.Gson;
-
-public class MessageEncoder implements Encoder.Text<Message> {
+public class MessageEncoder implements Encoder.Text<RequestMessage> {
 
     private static Gson gson = new Gson();
 
     @Override
-    public String encode(Message message) throws EncodeException {
+    public String encode(RequestMessage message) throws EncodeException {
         String json = gson.toJson(message);
         return json;
     }
