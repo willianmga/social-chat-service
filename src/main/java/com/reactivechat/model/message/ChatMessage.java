@@ -16,6 +16,7 @@ public class ChatMessage {
     private final String from;
     private final DestinationType destinationType;
     private final String destinationId;
+    private final String message;
     private final OffsetDateTime date;
     
     public enum DestinationType {

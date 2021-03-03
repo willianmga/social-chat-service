@@ -66,7 +66,7 @@ public class ChatEndpoint {
                 clientServerMessageController.handleNotAuthenticated(session);
             }
         } else {
-            handleWhiteListed(session, messageType);
+            handleWhiteListed(session, requestMessage, messageType);
         }
         
     }
@@ -76,26 +76,31 @@ public class ChatEndpoint {
                                            final MessageType messageType) {
         
         switch (messageType) {
-            case AUTHENTICATE:
-                authenticationController.handleAuthenticate((AuthenticateRequest) requestMessage.getPayload(), session);
-                break;
             case USER_MESSAGE:
                 chatMessageController.handleChatMessage(session, requestMessage);
                 break;
             case CONTACTS_LIST:
                 chatMessageController.handleContactsMessage(session);
                 break;
-            default: LOGGER.error("Unable to handle message of type {}" + messageType.name());
+            default: LOGGER.error("Unable to handle message of type {}", messageType.name());
         }
         
     }
     
-    private void handleWhiteListed(final Session session, final MessageType messageType) {
-        if (messageType == PING) {
-            clientServerMessageController.handlePing(session);
-        } else {
-            LOGGER.error("Unable to handle message of type {}" + messageType.name());
+    private void handleWhiteListed(final Session session,
+                                   final RequestMessage requestMessage,
+                                   final MessageType messageType) {
+    
+        switch (messageType) {
+            case AUTHENTICATE:
+                authenticationController.handleAuthenticate((AuthenticateRequest) requestMessage.getPayload(), session);
+                break;
+            case PING:
+                clientServerMessageController.handlePing(session);
+                break;
+            default: LOGGER.error("Unable to handle message of type {}", messageType.name());
         }
+
     }
     
     @OnClose
