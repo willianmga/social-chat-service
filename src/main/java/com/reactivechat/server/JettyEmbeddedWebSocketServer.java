@@ -17,6 +17,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class JettyEmbeddedWebSocketServer {
     
+    private static final int SERVER_PORT;
+    
+    static {
+    
+        String portEnv = System.getenv("PORT");
+    
+        SERVER_PORT = (portEnv != null && !portEnv.isEmpty())
+            ? Integer.parseInt(portEnv)
+            : 8080;
+
+    }
+    
     @Autowired
     private ServerEndpointConfigurator serverEndpointConfigurator;
     
@@ -24,7 +36,7 @@ public class JettyEmbeddedWebSocketServer {
     
         Server server = new Server();
         ServerConnector connector = new ServerConnector(server);
-        connector.setPort(8080);
+        connector.setPort(SERVER_PORT);
         server.addConnector(connector);
 
         ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
