@@ -4,6 +4,7 @@ import com.reactivechat.controller.AuthenticationController;
 import com.reactivechat.controller.ChatMessageController;
 import com.reactivechat.controller.ClientServerMessageControllerImpl;
 import com.reactivechat.server.JettyEmbeddedWebSocketServer;
+import com.reactivechat.server.ServerEndpointConfigurator;
 import com.reactivechat.websocket.ChatEndpoint;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,8 +30,8 @@ public class Config {
     }
     
     @Bean
-    public JettyEmbeddedWebSocketServer jettyWebSocketServer() {
-        JettyEmbeddedWebSocketServer webSocketServer = new JettyEmbeddedWebSocketServer();
+    public JettyEmbeddedWebSocketServer jettyWebSocketServer(final ServerEndpointConfigurator serverEndpointConfigurator) {
+        JettyEmbeddedWebSocketServer webSocketServer = new JettyEmbeddedWebSocketServer(serverEndpointConfigurator);
         webSocketServer.start();
         return webSocketServer;
     }

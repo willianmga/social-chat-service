@@ -6,14 +6,13 @@ import javax.websocket.EncodeException;
 import javax.websocket.Encoder;
 import javax.websocket.EndpointConfig;
 
-public class MessageEncoder implements Encoder.Text<RequestMessage> {
+public class RequestMessageEncoder implements Encoder.Text<RequestMessage> {
 
-    private static Gson gson = new Gson();
+    private static final Gson GSON = new Gson();
 
     @Override
     public String encode(RequestMessage message) throws EncodeException {
-        String json = gson.toJson(message);
-        return json;
+        return GSON.toJson(message);
     }
 
     @Override
@@ -25,4 +24,5 @@ public class MessageEncoder implements Encoder.Text<RequestMessage> {
     public void destroy() {
         // Close resources
     }
+    
 }

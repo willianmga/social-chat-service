@@ -11,14 +11,16 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.eclipse.jetty.websocket.jsr356.server.deploy.WebSocketServerContainerInitializer;
-import org.springframework.beans.factory.annotation.Autowired;
 
 public class JettyEmbeddedWebSocketServer {
     
     private static final int DEFAULT_SERVER_PORT = 8080;
     
-    @Autowired
-    private ServerEndpointConfigurator serverEndpointConfigurator;
+    private final ServerEndpointConfigurator serverEndpointConfigurator;
+    
+    public JettyEmbeddedWebSocketServer(final ServerEndpointConfigurator serverEndpointConfigurator) {
+        this.serverEndpointConfigurator = serverEndpointConfigurator;
+    }
     
     public void start() {
     
@@ -45,7 +47,7 @@ public class JettyEmbeddedWebSocketServer {
                     wsContainer.setDefaultMaxTextMessageBufferSize(65535);
                     
                     ServerEndpointConfig serverEndpointConfig = Builder
-                        .create(ChatEndpoint.class, "/chat/{userId}")
+                        .create(ChatEndpoint.class, "/chat")
                         .configurator(serverEndpointConfigurator)
                         .build();
                     

@@ -26,8 +26,8 @@ import static com.reactivechat.model.message.MessageType.PING;
 @Component
 @ServerEndpoint(
     value = "/chat",
-    decoders = MessageDecoder.class,
-    encoders = MessageEncoder.class
+    decoders = {RequestMessageDecoder.class, ResponseMessageDecoder.class},
+    encoders = {RequestMessageEncoder.class, ResponseMessageEncoder.class}
 )
 public class ChatEndpoint {
     
@@ -51,6 +51,7 @@ public class ChatEndpoint {
     @OnOpen
     public void onOpen(final Session session) {
         clientServerMessageController.handleConnected(session);
+        LOGGER.info("Session {} connected", session.getId());
     }
 
     @OnMessage
