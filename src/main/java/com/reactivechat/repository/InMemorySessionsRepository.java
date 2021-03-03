@@ -3,6 +3,7 @@ package com.reactivechat.repository;
 import com.reactivechat.exception.ChatException;
 import com.reactivechat.model.User;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +50,7 @@ public class InMemorySessionsRepository implements SessionsRepository {
         
     }
     
+    @Override
     public List<Session> findByUser(final User user) {
     
         final List<Session> sessions = userToSessionsMap.get(user);
@@ -59,6 +61,17 @@ public class InMemorySessionsRepository implements SessionsRepository {
         
         return sessions;
     
+    }
+    
+    @Override
+    public List<Session> findAll() {
+    
+        return userToSessionsMap
+            .values()
+            .stream()
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+
     }
     
     public User findBySession(final Session session) {

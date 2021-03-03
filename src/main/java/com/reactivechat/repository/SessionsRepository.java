@@ -9,6 +9,7 @@ public interface SessionsRepository {
     void create(final User user, final Session session);
     void delete(final User user, final Session session);
     List<Session> findByUser(final User user);
+    List<Session> findAll();
     User findBySession(final Session session);
     
 }

@@ -18,7 +18,8 @@ public class Destination {
     
     public enum DestinationType {
         USER,
-        GROUP
+        GROUP,
+        ALL_USERS_GROUP
     }
     
 }

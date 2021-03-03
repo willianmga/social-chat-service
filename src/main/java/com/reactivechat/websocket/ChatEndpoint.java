@@ -1,15 +1,19 @@
 package com.reactivechat.websocket;
 
 import com.reactivechat.controller.MessageBroadcasterController;
+import com.reactivechat.model.Contact;
 import com.reactivechat.model.Destination;
 import com.reactivechat.model.Destination.DestinationType;
+import com.reactivechat.model.Group;
 import com.reactivechat.model.Message;
 import com.reactivechat.model.MessageContent;
 import com.reactivechat.model.MessageContent.MessageType;
 import com.reactivechat.model.User;
+import com.reactivechat.repository.GroupsRepository;
 import com.reactivechat.repository.SessionsRepository;
 import com.reactivechat.repository.UsersRepository;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.websocket.OnClose;
@@ -37,15 +41,18 @@ public class ChatEndpoint {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatEndpoint.class);
     
     private final UsersRepository usersRepository;
+    private final GroupsRepository groupsRepository;
     private final SessionsRepository sessionsRepository;
     private final MessageBroadcasterController broadcasterController;
     
     @Autowired
     public ChatEndpoint(final UsersRepository usersRepository,
+                        final GroupsRepository groupsRepository,
                         final SessionsRepository sessionsRepository,
                         final MessageBroadcasterController broadcasterController) {
     
         this.usersRepository = usersRepository;
+        this.groupsRepository = groupsRepository;
         this.sessionsRepository = sessionsRepository;
         this.broadcasterController = broadcasterController;
     }
@@ -59,8 +66,12 @@ public class ChatEndpoint {
         final Message<String> message = chatServerMessage(user, "Connected!");
         broadcasterController.broadcastToSession(session, message);
     
-        final List<User> contacts = usersRepository.findContacts(user);
-        final Message<List<User>> contactsListMessage = newMessage(CHAT_SERVER.getUser(), user, MessageType.CONTACTS_LIST, contacts);
+        final List<User> userContacts = usersRepository.findContacts(user);
+        final List<Group> groupContacts = groupsRepository.findGroups(user);
+        final List<Contact> allContacts = new ArrayList<>(groupContacts);
+        allContacts.addAll(userContacts);
+        
+        final Message<List<Contact>> contactsListMessage = newMessage(CHAT_SERVER.getUser(), user, MessageType.CONTACTS_LIST, allContacts);
         broadcasterController.broadcastToSession(session, contactsListMessage);
     
         LOGGER.info("New session created: {}", session.getId());
@@ -71,6 +82,13 @@ public class ChatEndpoint {
     
         final User user = sessionsRepository.findBySession(session);
     
+        if (message.getDestination().getDestinationType() == DestinationType.USER) {
+            final User destinationUser = usersRepository.findById(message.getDestination().getDestinationId());
+            LOGGER.info("Messaged received from user {} to user {}", user.getUsername(), destinationUser.getUsername());
+        } else if (message.getDestination().getDestinationType() == DestinationType.ALL_USERS_GROUP) {
+            LOGGER.info("Messaged received from user {} to all users", user.getName());
+        }
+        
         Message<String> newMessage = new Message<>(
             UUID.randomUUID().toString(),
             user.getId(),
@@ -82,18 +100,18 @@ public class ChatEndpoint {
             OffsetDateTime.now()
         );
 
-        broadcasterController.broadcast(newMessage);
+        broadcasterController.broadcast(session, newMessage);
     
-        LOGGER.info("Messaged received from session {}", session.getId());
     }
 
     @OnClose
     public void onClose(final Session session) {
         
         final User user = sessionsRepository.findBySession(session);
-        final Message<String> message = chatServerMessage(user, "Disconnected!");
-    
+        
+        //final Message<String> message = chatServerMessage(user, "Disconnected!");
         //broadcasterController.broadcastToSession(session, message);
+        
         sessionsRepository.delete(user, session);
     
         LOGGER.info("Session {} finished gracefully", session.getId());

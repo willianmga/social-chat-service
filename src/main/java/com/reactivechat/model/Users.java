@@ -11,7 +11,7 @@ public enum Users {
         .id("f42fe26e-ead5-4ab6-9a0f-2f2534fc074c")
         .name("chat-server")
         .username("chat-server")
-        .status("Online")
+        .description("Online")
         .build()
     );
     
