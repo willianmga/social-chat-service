@@ -19,7 +19,9 @@ public class MessageContent<T> {
     public enum MessageType {
         CONTACTS_LIST,
         USER_MESSAGE,
-        SERVER
+        SERVER,
+        PING,
+        PONG
     }
     
 }

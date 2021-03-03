@@ -80,6 +80,18 @@ public class ChatEndpoint {
     @OnMessage
     public void onMessage(final Session session, final Message<String> message) {
     
+        final MessageType messageType = message.getPayload().getType();
+    
+        switch (messageType) {
+            case PING: handlePingMessage(session);
+            case USER_MESSAGE: handleUserMessage(session, message);
+            default: LOGGER.error("Unable to handle message of type {}" + messageType.name());
+        }
+
+    }
+    
+    private void handleUserMessage(final Session session, final Message<String> message) {
+    
         final User user = sessionsRepository.findBySession(session);
     
         if (message.getDestination().getDestinationType() == DestinationType.USER) {
@@ -88,7 +100,7 @@ public class ChatEndpoint {
         } else if (message.getDestination().getDestinationType() == DestinationType.ALL_USERS_GROUP) {
             LOGGER.info("Messaged received from user {} to all users", user.getName());
         }
-        
+    
         Message<String> newMessage = new Message<>(
             UUID.randomUUID().toString(),
             user.getId(),
@@ -99,11 +111,27 @@ public class ChatEndpoint {
             new MessageContent<>(MessageType.USER_MESSAGE, message.getPayload().getContent()),
             OffsetDateTime.now()
         );
-
-        broadcasterController.broadcast(session, newMessage);
     
+        broadcasterController.broadcast(session, newMessage);
+        
     }
-
+    
+    private void handlePingMessage(final Session session) {
+    
+        Message<String> pongMessage = new Message<>(
+            UUID.randomUUID().toString(),
+            CHAT_SERVER.getId(),
+            Destination.builder()
+                .destinationType(DestinationType.CLIENT)
+                .build(),
+            new MessageContent<>(MessageType.PONG, MessageType.PONG.name()),
+            OffsetDateTime.now()
+        );
+        
+        broadcasterController.broadcastToSession(session, pongMessage);
+        
+    }
+    
     @OnClose
     public void onClose(final Session session) {
         
@@ -120,6 +148,7 @@ public class ChatEndpoint {
     @OnError
     public void onError(Session session, Throwable throwable) {
         LOGGER.error("Error occurred during session {}. Reason {}", session.getId(), throwable.getMessage());
+        throwable.printStackTrace();
     }
     
     private Message<String> chatServerMessage(final User destinationUser, final String message) {

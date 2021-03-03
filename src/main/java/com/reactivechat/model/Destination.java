@@ -19,7 +19,9 @@ public class Destination {
     public enum DestinationType {
         USER,
         GROUP,
-        ALL_USERS_GROUP
+        ALL_USERS_GROUP,
+        CLIENT,
+        SERVER
     }
     
 }
