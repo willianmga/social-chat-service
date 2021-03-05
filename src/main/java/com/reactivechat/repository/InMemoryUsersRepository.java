@@ -1,13 +1,15 @@
 package com.reactivechat.repository;
 
+import com.reactivechat.exception.ChatException;
+import com.reactivechat.exception.ResponseStatus;
+import com.reactivechat.model.Contact.ContactType;
 import com.reactivechat.model.User;
-import com.reactivechat.model.Users;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,19 +19,12 @@ public class InMemoryUsersRepository implements UsersRepository {
     
     public InMemoryUsersRepository() {
         this.idToUsersMap = new HashMap<>();
-    
-        // TODO: temporary till user creation is finished
-        Stream.of(Users.values())
-            .forEach(user -> {
-                idToUsersMap.put(user.getId(), user.getUser());
-            });
-
     }
     
     public User create(final User user) {
     
         if (idToUsersMap.containsKey(user.getUsername())) {
-            throw new IllegalArgumentException("username " + user.getUsername() + " already taken");
+            throw new ChatException("username already taken", ResponseStatus.USERNAME_IN_USE);
         }
         
         final User newUser = User.builder()
@@ -37,6 +32,8 @@ public class InMemoryUsersRepository implements UsersRepository {
             .username(user.getUsername())
             .name(user.getName())
             .avatar(user.getAvatar())
+            .description(user.getDescription())
+            .contactType(ContactType.USER)
             .build();
     
         idToUsersMap.put(newUser.getUsername(), newUser);
@@ -53,6 +50,15 @@ public class InMemoryUsersRepository implements UsersRepository {
         }
     
         return user;
+    }
+    
+    @Override
+    public Optional<User> findByUsername(String username) {
+        return idToUsersMap
+            .values()
+            .stream()
+            .filter(user -> user.getUsername().equals(username))
+            .findFirst();
     }
     
     @Override

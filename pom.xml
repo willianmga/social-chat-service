@@ -49,8 +49,6 @@
             <artifactId>javax-websocket-server-impl</artifactId>
             <version>${jetty.version}</version>
         </dependency>
-
-
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
@@ -64,5 +62,15 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <finalName>reactive-chat-back</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

@@ -10,10 +10,9 @@ import lombok.ToString;
 @Builder
 @ToString
 @AllArgsConstructor
-public class User implements Contact {
+public class Group implements Contact {
 
     private final String id;
-    private final String username;
     private final String name;
     private final String avatar;
     private final String description;
@@ -27,14 +26,13 @@ public class User implements Contact {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        User user = (User) o;
-        return id.equals(user.id) &&
-            username.equals(user.username);
+        Group user = (Group) o;
+        return id.equals(user.id);
     }
     
     @Override
     public int hashCode() {
-        return Objects.hash(id, username);
+        return Objects.hash(id);
     }
     
 }

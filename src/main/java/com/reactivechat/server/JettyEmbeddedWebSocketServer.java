@@ -11,20 +11,22 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.eclipse.jetty.websocket.jsr356.server.deploy.WebSocketServerContainerInitializer;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
-@Component
 public class JettyEmbeddedWebSocketServer {
     
-    @Autowired
-    private ServerEndpointConfigurator serverEndpointConfigurator;
+    private static final int DEFAULT_SERVER_PORT = 8080;
+    
+    private final ServerEndpointConfigurator serverEndpointConfigurator;
+    
+    public JettyEmbeddedWebSocketServer(final ServerEndpointConfigurator serverEndpointConfigurator) {
+        this.serverEndpointConfigurator = serverEndpointConfigurator;
+    }
     
     public void start() {
     
         Server server = new Server();
         ServerConnector connector = new ServerConnector(server);
-        connector.setPort(8080);
+        connector.setPort(getServerPort());
         server.addConnector(connector);
 
         ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
@@ -45,7 +47,7 @@ public class JettyEmbeddedWebSocketServer {
                     wsContainer.setDefaultMaxTextMessageBufferSize(65535);
                     
                     ServerEndpointConfig serverEndpointConfig = Builder
-                        .create(ChatEndpoint.class, "/chat/{userId}")
+                        .create(ChatEndpoint.class, "/chat")
                         .configurator(serverEndpointConfigurator)
                         .build();
                     
@@ -59,6 +61,13 @@ public class JettyEmbeddedWebSocketServer {
             t.printStackTrace(System.err);
         }
         
+    }
+    
+    private int getServerPort() {
+        String portEnv = System.getenv("PORT");
+        return (portEnv != null && !portEnv.isEmpty())
+            ? Integer.parseInt(portEnv)
+            : DEFAULT_SERVER_PORT;
     }
     
 }
