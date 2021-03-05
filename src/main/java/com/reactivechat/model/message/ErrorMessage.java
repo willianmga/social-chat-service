@@ -1,6 +1,6 @@
 package com.reactivechat.model.message;
 
-import com.reactivechat.exception.ErrorType;
+import com.reactivechat.exception.ResponseStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -15,6 +15,6 @@ import lombok.ToString;
 public class ErrorMessage {
     
     private final String message;
-    private final ErrorType errorType;
+    private final ResponseStatus status;
     
 }

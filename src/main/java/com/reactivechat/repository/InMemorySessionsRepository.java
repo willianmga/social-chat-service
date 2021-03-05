@@ -37,11 +37,11 @@ public class InMemorySessionsRepository implements SessionsRepository {
     @Override
     public void authenticate(Session session, String token) {
     
-        if (authenticatedSessionsMap.get(token) == null) {
-            authenticatedSessionsMap.put(token, session.getId());
+        if (authenticatedSessionsMap.get(token) != null) {
+            throw new ChatException("Failed to authenticate session: Token is already in use by another session");
         }
-        
-        throw new ChatException("Failed to authenticate session: Token is already in use by another session");
+    
+        authenticatedSessionsMap.put(token, session.getId());
     }
     
     @Override

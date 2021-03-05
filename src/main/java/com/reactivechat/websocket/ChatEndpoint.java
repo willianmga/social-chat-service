@@ -5,8 +5,10 @@ import com.reactivechat.controller.ChatMessageController;
 import com.reactivechat.controller.ClientServerMessageController;
 import com.reactivechat.controller.ClientServerMessageControllerImpl;
 import com.reactivechat.model.message.AuthenticateRequest;
+import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.RequestMessage;
+import com.reactivechat.model.message.SignupRequest;
 import java.util.Arrays;
 import java.util.List;
 import javax.websocket.OnClose;
@@ -22,6 +24,8 @@ import org.springframework.stereotype.Component;
 
 import static com.reactivechat.model.message.MessageType.AUTHENTICATE;
 import static com.reactivechat.model.message.MessageType.PING;
+import static com.reactivechat.model.message.MessageType.SIGNUP;
+import static com.reactivechat.websocket.PayloadEncoder.decodePayload;
 
 @Component
 @ServerEndpoint(
@@ -32,7 +36,7 @@ import static com.reactivechat.model.message.MessageType.PING;
 public class ChatEndpoint {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatEndpoint.class);
-    private static final List<MessageType> WHITELISTED_MESSAGE_TYPES = Arrays.asList(PING, AUTHENTICATE);
+    private static final List<MessageType> WHITELISTED_MESSAGE_TYPES = Arrays.asList(PING, AUTHENTICATE, SIGNUP);
     
     private final AuthenticationController authenticationController;
     private final ChatMessageController chatMessageController;
@@ -55,7 +59,7 @@ public class ChatEndpoint {
     }
 
     @OnMessage
-    public void onMessage(final Session session, final RequestMessage requestMessage) {
+    public void onMessage(final Session session, final RequestMessage<?> requestMessage) {
     
         final MessageType messageType = requestMessage.getType();
     
@@ -72,15 +76,17 @@ public class ChatEndpoint {
     }
 
     private void handleBlackListedMessages(final Session session,
-                                           final RequestMessage requestMessage,
+                                           final RequestMessage<?> requestMessage,
                                            final MessageType messageType) {
         
         switch (messageType) {
             case USER_MESSAGE:
-                chatMessageController.handleChatMessage(session, requestMessage);
+                chatMessageController
+                    .handleChatMessage(session, decodePayload(requestMessage.getPayload(), ChatMessage.class));
                 break;
             case CONTACTS_LIST:
-                chatMessageController.handleContactsMessage(session);
+                chatMessageController
+                    .handleContactsMessage(session);
                 break;
             default: LOGGER.error("Unable to handle message of type {}", messageType.name());
         }
@@ -88,12 +94,17 @@ public class ChatEndpoint {
     }
     
     private void handleWhiteListed(final Session session,
-                                   final RequestMessage requestMessage,
+                                   final RequestMessage<?> requestMessage,
                                    final MessageType messageType) {
     
         switch (messageType) {
             case AUTHENTICATE:
-                authenticationController.handleAuthenticate((AuthenticateRequest) requestMessage.getPayload(), session);
+                authenticationController
+                    .handleAuthenticate(decodePayload(requestMessage.getPayload(), AuthenticateRequest.class), session);
+                break;
+            case SIGNUP:
+                authenticationController
+                    .handleSignup(decodePayload(requestMessage.getPayload(), SignupRequest.class), session);
                 break;
             case PING:
                 clientServerMessageController.handlePing(session);

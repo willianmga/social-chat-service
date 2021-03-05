@@ -80,13 +80,14 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
         sessions
             .forEach(session -> {
                 try {
-                    if (session.isOpen()) {
+                    if (session.isOpen()) { // TODO: check that session is authenticated
                         session.getBasicRemote().sendObject(message);
                     } else {
-                        LOGGER.error("Can't send message to session {} because session is not opened" + session.getId());
+                        LOGGER.error("Can't send message to session {} because session is not opened", session.getId());
+                        // TODO: remove session
                     }
                 } catch (Exception e) {
-                    LOGGER.error("Error occurred while sending message to session " + session.getId() + ": " + e.getMessage());
+                    LOGGER.error("Error occurred while sending message to session {}. Reason: {}", session.getId(), e.getMessage());
                 }
             });
      

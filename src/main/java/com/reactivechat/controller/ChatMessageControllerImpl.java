@@ -5,12 +5,13 @@ import com.reactivechat.model.Group;
 import com.reactivechat.model.User;
 import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.ChatMessage.DestinationType;
-import com.reactivechat.model.message.RequestMessage;
+import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.repository.GroupsRepository;
 import com.reactivechat.repository.SessionsRepository;
 import com.reactivechat.repository.UsersRepository;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import javax.websocket.Session;
 import org.slf4j.Logger;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import static com.reactivechat.model.message.MessageType.CONTACTS_LIST;
+import static com.reactivechat.model.message.MessageType.NEW_CONTACT_REGISTERED;
 
 @Service
 public class ChatMessageControllerImpl implements ChatMessageController {
@@ -42,12 +44,10 @@ public class ChatMessageControllerImpl implements ChatMessageController {
     
     @Override
     public void handleChatMessage(final Session session,
-                                  final RequestMessage<ChatMessage> requestMessage) {
+                                  final ChatMessage chatMessage) {
         
         final User user = sessionsRepository.findBySession(session);
-    
-        ChatMessage chatMessage = requestMessage.getPayload();
-    
+
         if (chatMessage.getDestinationType() == DestinationType.USER) {
             final User destinationUser = usersRepository.findById(chatMessage.getDestinationId());
             LOGGER.info("Messaged received from user {} to user {}", user.getUsername(), destinationUser.getUsername());
@@ -55,7 +55,7 @@ public class ChatMessageControllerImpl implements ChatMessageController {
             LOGGER.info("Messaged received from user {} to all users", user.getName());
         }
     
-        ResponseMessage<ChatMessage> responseMessage = new ResponseMessage<>(requestMessage.getType(), chatMessage);
+        ResponseMessage<ChatMessage> responseMessage = new ResponseMessage<>(MessageType.USER_MESSAGE, chatMessage);
 
         broadcasterController.broadcastChatMessage(session, responseMessage);
         
@@ -78,6 +78,19 @@ public class ChatMessageControllerImpl implements ChatMessageController {
             .build();
         
         broadcasterController.broadcastToSession(session, responseMessage);
+    }
+    
+    @Override
+    public void handleNewContact(final Contact contact, final Session session) {
+    
+        ResponseMessage<Object> responseMessage = ResponseMessage
+            .builder()
+            .type(NEW_CONTACT_REGISTERED)
+            .payload(Collections.singletonList(contact))
+            .build();
+    
+        broadcasterController.broadcastToAllExceptSession(session, responseMessage);
+        
     }
     
 }

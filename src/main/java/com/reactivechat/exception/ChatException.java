@@ -6,21 +6,21 @@ import lombok.Getter;
 @Getter
 public class ChatException extends RuntimeException {
     
-    private final ErrorType errorType;
+    private final ResponseStatus responseStatus;
     
     public ChatException(String message) {
-        this(message, ErrorType.SERVER_ERROR);
+        this(message, ResponseStatus.SERVER_ERROR);
     }
     
-    public ChatException(String message, ErrorType errorType) {
+    public ChatException(String message, ResponseStatus responseStatus) {
         super(message);
-        this.errorType = errorType;
+        this.responseStatus = responseStatus;
     }
     
     public ErrorMessage toErrorMessage() {
         return ErrorMessage
             .builder()
-            .errorType(this.errorType)
+            .status(this.responseStatus)
             .message(this.getMessage())
             .build();
     }
