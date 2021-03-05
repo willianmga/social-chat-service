@@ -6,6 +6,7 @@ import com.reactivechat.model.User;
 import com.reactivechat.model.message.AuthenticateRequest;
 import com.reactivechat.model.message.AuthenticateResponse;
 import com.reactivechat.model.message.MessageType;
+import com.reactivechat.model.message.ReauthenticateRequest;
 import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.model.message.SignupRequest;
 import com.reactivechat.repository.SessionsRepository;
@@ -78,6 +79,45 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     }
     
     @Override
+    public void handleReauthenticate(final ReauthenticateRequest reauthenticateRequest, final Session session) {
+    
+        try {
+    
+            final User user = sessionsRepository.reauthenticate(session, reauthenticateRequest.getToken());
+    
+            final AuthenticateResponse authenticateResponse = AuthenticateResponse.builder()
+                .user(user)
+                .token(reauthenticateRequest.getToken())
+                .status(ResponseStatus.SUCCESS)
+                .build();
+    
+            final ResponseMessage<Object> responseMessage = ResponseMessage
+                .builder()
+                .type(MessageType.REAUTHENTICATE)
+                .payload(authenticateResponse)
+                .build();
+        
+            broadcasterController.broadcastToSession(session, responseMessage);
+    
+            LOGGER.info("Session {} reauthenticated with token {} of user {}", session.getId(), reauthenticateRequest.getToken(), user.getUsername());
+            
+        } catch (ChatException e) {
+        
+            LOGGER.error("Failed to reauthenticate with token {}. Reason: {}", reauthenticateRequest.getToken(), e.getMessage());
+            
+            final ResponseMessage<Object> responseMessage = ResponseMessage
+                .builder()
+                .type(MessageType.REAUTHENTICATE)
+                .payload(e.toErrorMessage())
+                .build();
+        
+            broadcasterController.broadcastToSession(session, responseMessage);
+        
+        }
+        
+    }
+    
+    @Override
     public void handleSignup(final SignupRequest signupRequest, final Session session) {
     
         try {
@@ -117,8 +157,7 @@ public class AuthenticationControllerImpl implements AuthenticationController {
         
     }
     
-    private AuthenticateResponse authenticate(final AuthenticateRequest authenticateRequest,
-                                              final Session session) {
+    private AuthenticateResponse authenticate(final AuthenticateRequest authenticateRequest, final Session session) {
         
         Optional<User> userOpt = usersRepository.findByUsername(authenticateRequest.getUsername());
         
@@ -155,17 +194,7 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     
     @Override
     public void logoff(final Session session) {
-    
-        User user = sessionsRepository.findBySession(session);
-        sessionsRepository.delete(user, session);
-    
-        ResponseMessage<Object> responseMessage = ResponseMessage
-            .builder()
-            .type(MessageType.LOGOFF)
-            .build();
-    
-        broadcasterController.broadcastToSession(session, responseMessage);
-        
+        sessionsRepository.delete(session);
     }
     
     private String buildToken(final Session session, final User user) {

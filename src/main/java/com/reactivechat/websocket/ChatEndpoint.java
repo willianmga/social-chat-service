@@ -7,6 +7,7 @@ import com.reactivechat.controller.ClientServerMessageControllerImpl;
 import com.reactivechat.model.message.AuthenticateRequest;
 import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.MessageType;
+import com.reactivechat.model.message.ReauthenticateRequest;
 import com.reactivechat.model.message.RequestMessage;
 import com.reactivechat.model.message.SignupRequest;
 import java.util.Arrays;
@@ -23,7 +24,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import static com.reactivechat.model.message.MessageType.AUTHENTICATE;
+import static com.reactivechat.model.message.MessageType.LOGOFF;
 import static com.reactivechat.model.message.MessageType.PING;
+import static com.reactivechat.model.message.MessageType.REAUTHENTICATE;
 import static com.reactivechat.model.message.MessageType.SIGNUP;
 import static com.reactivechat.websocket.PayloadEncoder.decodePayload;
 
@@ -36,7 +39,7 @@ import static com.reactivechat.websocket.PayloadEncoder.decodePayload;
 public class ChatEndpoint {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatEndpoint.class);
-    private static final List<MessageType> WHITELISTED_MESSAGE_TYPES = Arrays.asList(PING, AUTHENTICATE, SIGNUP);
+    private static final List<MessageType> WHITELISTED_MESSAGE_TYPES = Arrays.asList(PING, LOGOFF, AUTHENTICATE, REAUTHENTICATE, SIGNUP);
     
     private final AuthenticationController authenticationController;
     private final ChatMessageController chatMessageController;
@@ -102,12 +105,19 @@ public class ChatEndpoint {
                 authenticationController
                     .handleAuthenticate(decodePayload(requestMessage.getPayload(), AuthenticateRequest.class), session);
                 break;
+            case REAUTHENTICATE:
+                authenticationController
+                    .handleReauthenticate(decodePayload(requestMessage.getPayload(), ReauthenticateRequest.class), session);
+                break;
             case SIGNUP:
                 authenticationController
                     .handleSignup(decodePayload(requestMessage.getPayload(), SignupRequest.class), session);
                 break;
             case PING:
                 clientServerMessageController.handlePing(session);
+                break;
+            case LOGOFF:
+                authenticationController.logoff(session);
                 break;
             default: LOGGER.error("Unable to handle message of type {}", messageType.name());
         }
@@ -116,12 +126,11 @@ public class ChatEndpoint {
     
     @OnClose
     public void onClose(final Session session) {
-        authenticationController.logoff(session);
-        LOGGER.info("Session {} finished gracefully", session.getId());
+        LOGGER.info("Session {} closed", session.getId());
     }
     
     @OnError
-    public void onError(Session session, Throwable throwable) {
+    public void onError(final Session session, final Throwable throwable) {
         LOGGER.error("Error occurred during session {}. Reason {}", session.getId(), throwable.getMessage());
         throwable.printStackTrace();
     }

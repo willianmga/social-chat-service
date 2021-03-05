@@ -10,6 +10,7 @@ public enum MessageType {
     CONNECTED,
     DISCONNECTED,
     AUTHENTICATE,
+    REAUTHENTICATE,
     SIGNUP,
     LOGOFF,
     NOT_AUTHENTICATED,

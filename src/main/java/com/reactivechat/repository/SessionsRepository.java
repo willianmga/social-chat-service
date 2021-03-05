@@ -7,11 +7,12 @@ import javax.websocket.Session;
 public interface SessionsRepository {
     
     void create(final User user, final Session session);
-    void authenticate(Session session, String token);
+    void authenticate(final Session session, final String token);
+    User reauthenticate(final Session session, final String token);
     boolean sessionIsAuthenticated(final Session session, final String token);
-    void delete(final User user, final Session session);
+    void delete(final Session session);
     List<Session> findByUser(final User user);
     List<Session> findAll();
-    User findBySession(final Session session);
+    User findBySessionId(final String sessionId);
     
 }

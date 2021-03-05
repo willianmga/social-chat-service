@@ -46,7 +46,7 @@ public class ChatMessageControllerImpl implements ChatMessageController {
     public void handleChatMessage(final Session session,
                                   final ChatMessage chatMessage) {
         
-        final User user = sessionsRepository.findBySession(session);
+        final User user = sessionsRepository.findBySessionId(session.getId());
 
         if (chatMessage.getDestinationType() == DestinationType.USER) {
             final User destinationUser = usersRepository.findById(chatMessage.getDestinationId());
@@ -64,7 +64,7 @@ public class ChatMessageControllerImpl implements ChatMessageController {
     @Override
     public void handleContactsMessage(final Session session) {
     
-        final User user = sessionsRepository.findBySession(session);
+        final User user = sessionsRepository.findBySessionId(session.getId());
         
         final List<User> userContacts = usersRepository.findContacts(user);
         final List<Group> groupContacts = groupsRepository.findGroups(user);
