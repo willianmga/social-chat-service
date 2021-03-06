@@ -36,7 +36,7 @@ public class InMemoryUsersRepository implements UsersRepository {
             .contactType(ContactType.USER)
             .build();
     
-        idToUsersMap.put(newUser.getUsername(), newUser);
+        idToUsersMap.put(newUser.getId(), newUser);
 
         return newUser;
     }
@@ -63,7 +63,6 @@ public class InMemoryUsersRepository implements UsersRepository {
     
     @Override
     public List<User> findContacts(User user) {
-        
         return idToUsersMap
             .values()
             .stream()
