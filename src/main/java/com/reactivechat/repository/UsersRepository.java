@@ -8,7 +8,8 @@ public interface UsersRepository {
     
     User create(final User user);
     User findById(final String id);
-    Optional<User> findByUsername(final String username);
+    Optional<User> findFullDetailsByUsername(final String username);
     List<User> findContacts(final User user);
     
+    User mapToNonSensitiveDataUser(User user);
 }

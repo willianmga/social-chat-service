@@ -21,15 +21,17 @@ public class InMemoryUsersRepository implements UsersRepository {
         this.idToUsersMap = new HashMap<>();
     }
     
+    @Override
     public User create(final User user) {
     
-        if (idToUsersMap.containsKey(user.getUsername())) {
+        if (findFullDetailsByUsername(user.getUsername()).isPresent()) {
             throw new ChatException("username already taken", ResponseStatus.USERNAME_IN_USE);
         }
         
         final User newUser = User.builder()
             .id(UUID.randomUUID().toString())
             .username(user.getUsername())
+            .password(user.getPassword())
             .name(user.getName())
             .avatar(user.getAvatar())
             .description(user.getDescription())
@@ -41,6 +43,7 @@ public class InMemoryUsersRepository implements UsersRepository {
         return newUser;
     }
     
+    @Override
     public User findById(final String id) {
     
         final User user = idToUsersMap.get(id);
@@ -49,11 +52,11 @@ public class InMemoryUsersRepository implements UsersRepository {
             throw new IllegalArgumentException("User " + id + " is not registered");
         }
     
-        return user;
+        return mapToNonSensitiveDataUser(user);
     }
     
     @Override
-    public Optional<User> findByUsername(String username) {
+    public Optional<User> findFullDetailsByUsername(final String username) {
         return idToUsersMap
             .values()
             .stream()
@@ -67,8 +70,19 @@ public class InMemoryUsersRepository implements UsersRepository {
             .values()
             .stream()
             .filter(usr -> !usr.equals(user))
+            .map(this::mapToNonSensitiveDataUser)
             .collect(Collectors.toList());
-        
+    }
+    
+    @Override
+    public User mapToNonSensitiveDataUser(final User user) {
+        return User.builder()
+            .id(user.getId())
+            .name(user.getName())
+            .description(user.getDescription())
+            .avatar(user.getAvatar())
+            .contactType(user.getContactType())
+            .build();
     }
     
 }

@@ -3,6 +3,7 @@ package com.reactivechat.controller;
 import com.reactivechat.exception.ChatException;
 import com.reactivechat.exception.ResponseStatus;
 import com.reactivechat.model.User;
+import com.reactivechat.model.UserDTO;
 import com.reactivechat.model.message.AuthenticateRequest;
 import com.reactivechat.model.message.AuthenticateResponse;
 import com.reactivechat.model.message.MessageType;
@@ -20,6 +21,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import static com.reactivechat.exception.ResponseStatus.INVALID_NAME;
+import static com.reactivechat.exception.ResponseStatus.INVALID_PASSWORD;
+import static com.reactivechat.exception.ResponseStatus.INVALID_USERNAME;
 
 @Service
 public class AuthenticationControllerImpl implements AuthenticationController {
@@ -86,7 +91,7 @@ public class AuthenticationControllerImpl implements AuthenticationController {
             final User user = sessionsRepository.reauthenticate(session, reauthenticateRequest.getToken());
     
             final AuthenticateResponse authenticateResponse = AuthenticateResponse.builder()
-                .user(user)
+                .user(mapToUserDTO(user))
                 .token(reauthenticateRequest.getToken())
                 .status(ResponseStatus.SUCCESS)
                 .build();
@@ -122,10 +127,13 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     
         try {
     
+            validateSignUpRequest(signupRequest);
+            
             final User createdUser = usersRepository.create(mapToUser(signupRequest));
     
             AuthenticateRequest authenticateRequest = AuthenticateRequest.builder()
                 .username(signupRequest.getUsername())
+                .password(signupRequest.getPassword())
                 .build();
     
             AuthenticateResponse authenticateResponse = authenticate(authenticateRequest, session);
@@ -157,36 +165,6 @@ public class AuthenticationControllerImpl implements AuthenticationController {
         
     }
     
-    private AuthenticateResponse authenticate(final AuthenticateRequest authenticateRequest, final Session session) {
-        
-        Optional<User> userOpt = usersRepository.findByUsername(authenticateRequest.getUsername());
-        
-        if (userOpt.isPresent()) {
-
-            try {
-                
-                User user = userOpt.get();
-                String token = buildToken(session, user);
-                sessionsRepository.create(user, session);
-                sessionsRepository.authenticate(session, token);
-    
-                LOGGER.info("New session created: {}", session.getId());
-    
-                return AuthenticateResponse.builder()
-                    .user(user)
-                    .token(token)
-                    .status(ResponseStatus.SUCCESS)
-                    .build();
-                
-            } catch (Exception e) {
-                throw new ChatException("Failed to authenticate. Reason: " + e.getMessage(), ResponseStatus.SERVER_ERROR);
-            }
-         
-        }
-        
-        throw new ChatException("Invalid Credentials", ResponseStatus.INVALID_CREDENTIALS);
-    }
-    
     @Override
     public boolean isAuthenticatedSession(final Session session, final String token) {
         return sessionsRepository.sessionIsAuthenticated(session, token);
@@ -195,6 +173,36 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     @Override
     public void logoff(final Session session) {
         sessionsRepository.delete(session);
+    }
+    
+    private AuthenticateResponse authenticate(final AuthenticateRequest authenticateRequest, final Session session) {
+        
+        Optional<User> userOpt = usersRepository.findFullDetailsByUsername(authenticateRequest.getUsername());
+        
+        if (userOpt.isPresent() && userOpt.get().getPassword().equals(authenticateRequest.getPassword())) {
+            
+            try {
+                
+                User user = userOpt.get();
+                String token = buildToken(session, user);
+                sessionsRepository.create(user, session);
+                sessionsRepository.authenticate(session, token);
+                
+                LOGGER.info("New session created: {}", session.getId());
+                
+                return AuthenticateResponse.builder()
+                    .user(mapToUserDTO(user))
+                    .token(token)
+                    .status(ResponseStatus.SUCCESS)
+                    .build();
+                
+            } catch (Exception e) {
+                throw new ChatException("Failed to authenticate. Reason: " + e.getMessage(), ResponseStatus.SERVER_ERROR);
+            }
+            
+        }
+        
+        throw new ChatException("Invalid Credentials", ResponseStatus.INVALID_CREDENTIALS);
     }
     
     private String buildToken(final Session session, final User user) {
@@ -206,12 +214,38 @@ public class AuthenticationControllerImpl implements AuthenticationController {
             .encodeToString(token.getBytes(StandardCharsets.UTF_8));
     }
     
+    private void validateSignUpRequest(final SignupRequest signupRequest) {
+        
+        if (signupRequest.getName() == null || signupRequest.getName().trim().isEmpty()) {
+            throw new ChatException("Name must be defined", INVALID_NAME);
+        }
+        
+        if (signupRequest.getUsername() == null || signupRequest.getUsername().trim().isEmpty()) {
+            throw new ChatException("Username must be defined", INVALID_USERNAME);
+        }
+        
+        if (signupRequest.getPassword() == null || signupRequest.getPassword().trim().isEmpty()) {
+            throw new ChatException("Username must be defined", INVALID_PASSWORD);
+        }
+        
+    }
+    
     private User mapToUser(final SignupRequest signupRequest) {
         return User.builder()
             .username(signupRequest.getUsername())
+            .password(signupRequest.getPassword())
             .name(signupRequest.getName())
             .avatar(avatarController.pickRandomAvatar())
             .description(DEFAULT_DESCRIPTION)
+            .build();
+    }
+    
+    private UserDTO mapToUserDTO(final User user) {
+        return UserDTO.builder()
+            .id(user.getId())
+            .name(user.getName())
+            .description(user.getDescription())
+            .avatar(user.getAvatar())
             .build();
     }
     

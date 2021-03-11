@@ -10,9 +10,11 @@ import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.repository.GroupsRepository;
 import com.reactivechat.repository.SessionsRepository;
 import com.reactivechat.repository.UsersRepository;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import javax.websocket.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,10 +46,19 @@ public class ChatMessageControllerImpl implements ChatMessageController {
     
     @Override
     public void handleChatMessage(final Session session,
-                                  final ChatMessage chatMessage) {
+                                  final ChatMessage receivedMessage) {
         
         final User user = sessionsRepository.findBySessionId(session.getId());
 
+        final ChatMessage chatMessage = ChatMessage.builder()
+            .id(UUID.randomUUID().toString())
+            .from(user.getId())
+            .destinationId(receivedMessage.getDestinationId())
+            .destinationType(receivedMessage.getDestinationType())
+            .message(receivedMessage.getMessage())
+            .date(OffsetDateTime.now())
+            .build();
+        
         if (chatMessage.getDestinationType() == DestinationType.USER) {
             final User destinationUser = usersRepository.findById(chatMessage.getDestinationId());
             LOGGER.info("Messaged received from user {} to user {}", user.getUsername(), destinationUser.getUsername());
