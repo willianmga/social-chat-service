@@ -1,5 +1,7 @@
-package com.reactivechat.controller;
+package com.reactivechat.controller.impl;
 
+import com.reactivechat.controller.ClientServerMessageController;
+import com.reactivechat.controller.MessageBroadcasterController;
 import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ResponseMessage;
 import javax.websocket.Session;

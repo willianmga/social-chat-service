@@ -1,5 +1,9 @@
-package com.reactivechat.controller;
+package com.reactivechat.controller.impl;
 
+import com.reactivechat.controller.AuthenticationController;
+import com.reactivechat.controller.AvatarController;
+import com.reactivechat.controller.ChatMessageController;
+import com.reactivechat.controller.MessageBroadcasterController;
 import com.reactivechat.exception.ChatException;
 import com.reactivechat.exception.ResponseStatus;
 import com.reactivechat.model.User;
@@ -10,8 +14,8 @@ import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ReauthenticateRequest;
 import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.model.message.SignupRequest;
-import com.reactivechat.repository.SessionsRepository;
-import com.reactivechat.repository.UsersRepository;
+import com.reactivechat.repository.LegacySessionsRepository;
+import com.reactivechat.repository.UserRepository;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Optional;
@@ -21,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import static com.reactivechat.exception.ResponseStatus.INVALID_NAME;
 import static com.reactivechat.exception.ResponseStatus.INVALID_PASSWORD;
@@ -32,19 +37,19 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticationControllerImpl.class);
     private static final String DEFAULT_DESCRIPTION = "Hi, I'm using SocialChat!";
     
-    private final UsersRepository usersRepository;
-    private final SessionsRepository sessionsRepository;
+    private final UserRepository userRepository;
+    private final LegacySessionsRepository sessionsRepository;
     private final AvatarController avatarController;
     private final ChatMessageController chatMessageController;
     private final MessageBroadcasterController broadcasterController;
     
     @Autowired
-    public AuthenticationControllerImpl(final UsersRepository usersRepository,
-                                        final SessionsRepository sessionsRepository,
-                                        final AvatarController avatarController,
+    public AuthenticationControllerImpl(final UserRepository userRepository,
+                                        final LegacySessionsRepository sessionsRepository,
+                                        final AvatarControllerImpl avatarController,
                                         final ChatMessageController chatMessageController,
                                         final MessageBroadcasterController broadcasterController) {
-        this.usersRepository = usersRepository;
+        this.userRepository = userRepository;
         this.sessionsRepository = sessionsRepository;
         this.avatarController = avatarController;
         this.chatMessageController = chatMessageController;
@@ -129,7 +134,7 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     
             validateSignUpRequest(signupRequest);
             
-            final User createdUser = usersRepository.create(mapToUser(signupRequest));
+            final Mono<User> createdUser = userRepository.create(mapToUser(signupRequest));
     
             AuthenticateRequest authenticateRequest = AuthenticateRequest.builder()
                 .username(signupRequest.getUsername())
@@ -145,7 +150,7 @@ public class AuthenticationControllerImpl implements AuthenticationController {
                 .build();
     
             broadcasterController.broadcastToSession(session, responseMessage);
-            chatMessageController.handleNewContact(createdUser, session);
+            chatMessageController.handleNewContact(createdUser.block(), session);
     
             LOGGER.info("New user registered: {}", signupRequest.getUsername());
             
@@ -177,7 +182,8 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     
     private AuthenticateResponse authenticate(final AuthenticateRequest authenticateRequest, final Session session) {
         
-        Optional<User> userOpt = usersRepository.findFullDetailsByUsername(authenticateRequest.getUsername());
+        Optional<User> userOpt = userRepository.findFullDetailsByUsername(authenticateRequest.getUsername())
+            .blockOptional();
         
         if (userOpt.isPresent() && userOpt.get().getPassword().equals(authenticateRequest.getPassword())) {
             

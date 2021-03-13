@@ -2,17 +2,26 @@ package com.reactivechat.config;
 
 import com.reactivechat.controller.AuthenticationController;
 import com.reactivechat.controller.ChatMessageController;
-import com.reactivechat.controller.ClientServerMessageControllerImpl;
+import com.reactivechat.controller.impl.ClientServerMessageControllerImpl;
+import com.reactivechat.model.session.ServerDetails;
 import com.reactivechat.server.JettyEmbeddedWebSocketServer;
 import com.reactivechat.server.ServerEndpointConfigurator;
 import com.reactivechat.websocket.ChatEndpoint;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class Config {
+public class JettyServerConfig {
+
+    @Bean
+    public ServerDetails serverDetails() {
+        return ServerDetails.builder()
+            .serverInstanceId(UUID.randomUUID().toString())
+            .build();
+    }
     
     @Bean
     public ChatEndpoint chatEndpoint(final AuthenticationController authenticationController,
