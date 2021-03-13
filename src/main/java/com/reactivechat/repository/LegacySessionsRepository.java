@@ -4,7 +4,8 @@ import com.reactivechat.model.User;
 import java.util.List;
 import javax.websocket.Session;
 
-public interface SessionsRepository {
+@Deprecated
+public interface LegacySessionsRepository {
     
     void create(final User user, final Session session);
     void authenticate(final Session session, final String token);

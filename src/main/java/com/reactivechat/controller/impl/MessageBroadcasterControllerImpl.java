@@ -5,7 +5,7 @@ import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.ChatMessage.DestinationType;
 import com.reactivechat.model.message.Message;
 import com.reactivechat.model.message.ResponseMessage;
-import com.reactivechat.repository.SessionsRepository;
+import com.reactivechat.repository.LegacySessionsRepository;
 import com.reactivechat.repository.UserRepository;
 import java.util.Collections;
 import java.util.List;
@@ -22,10 +22,10 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageBroadcasterControllerImpl.class);
     
     private final UserRepository usersRepository;
-    private final SessionsRepository sessionsRepository;
+    private final LegacySessionsRepository sessionsRepository;
     
     @Autowired
-    public MessageBroadcasterControllerImpl(final UserRepository userRepository, final SessionsRepository sessionsRepository) {
+    public MessageBroadcasterControllerImpl(final UserRepository userRepository, final LegacySessionsRepository sessionsRepository) {
         this.usersRepository = userRepository;
         this.sessionsRepository = sessionsRepository;
     }

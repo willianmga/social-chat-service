@@ -23,7 +23,7 @@ import static com.mongodb.client.model.Projections.include;
 public class MongoUserRepository implements UserRepository {
     
     private static final Bson NON_SENSITIVE_FIELDS =
-        fields(include("id", "username", "name", "avatar", "description", "contactType"));
+        fields(include("id", "name", "avatar", "description", "contactType"));
     
     private static final Bson SERVER_REQUIRED_FIELDS =
         fields(include("id", "username", "name", "contactType"));

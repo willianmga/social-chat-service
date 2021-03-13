@@ -14,7 +14,7 @@ import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ReauthenticateRequest;
 import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.model.message.SignupRequest;
-import com.reactivechat.repository.SessionsRepository;
+import com.reactivechat.repository.LegacySessionsRepository;
 import com.reactivechat.repository.UserRepository;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -38,14 +38,14 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     private static final String DEFAULT_DESCRIPTION = "Hi, I'm using SocialChat!";
     
     private final UserRepository userRepository;
-    private final SessionsRepository sessionsRepository;
+    private final LegacySessionsRepository sessionsRepository;
     private final AvatarController avatarController;
     private final ChatMessageController chatMessageController;
     private final MessageBroadcasterController broadcasterController;
     
     @Autowired
     public AuthenticationControllerImpl(final UserRepository userRepository,
-                                        final SessionsRepository sessionsRepository,
+                                        final LegacySessionsRepository sessionsRepository,
                                         final AvatarControllerImpl avatarController,
                                         final ChatMessageController chatMessageController,
                                         final MessageBroadcasterController broadcasterController) {

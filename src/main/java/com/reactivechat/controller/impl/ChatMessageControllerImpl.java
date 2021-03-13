@@ -10,7 +10,7 @@ import com.reactivechat.model.message.ChatMessage.DestinationType;
 import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.repository.GroupRepository;
-import com.reactivechat.repository.SessionsRepository;
+import com.reactivechat.repository.LegacySessionsRepository;
 import com.reactivechat.repository.UserRepository;
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -33,12 +33,12 @@ public class ChatMessageControllerImpl implements ChatMessageController {
     
     private final UserRepository usersRepository;
     private final GroupRepository groupsRepository;
-    private final SessionsRepository sessionsRepository;
+    private final LegacySessionsRepository sessionsRepository;
     private final MessageBroadcasterController broadcasterController;
     
     public ChatMessageControllerImpl(final UserRepository userRepository,
                                      final GroupRepository groupRepository,
-                                     final SessionsRepository sessionsRepository,
+                                     final LegacySessionsRepository sessionsRepository,
                                      final MessageBroadcasterController broadcasterController) {
         
         this.usersRepository = userRepository;

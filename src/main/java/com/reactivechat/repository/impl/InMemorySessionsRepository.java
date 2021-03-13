@@ -2,7 +2,7 @@ package com.reactivechat.repository.impl;
 
 import com.reactivechat.exception.ChatException;
 import com.reactivechat.model.User;
-import com.reactivechat.repository.SessionsRepository;
+import com.reactivechat.repository.LegacySessionsRepository;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -15,7 +15,7 @@ import javax.websocket.Session;
 import org.springframework.stereotype.Component;
 
 @Component
-public class InMemorySessionsRepository implements SessionsRepository {
+public class InMemorySessionsRepository implements LegacySessionsRepository {
     
     private final Map<String, User> sessionIdToUserMap;
     private final Map<String, List<Session>> userToSessionsMap;
