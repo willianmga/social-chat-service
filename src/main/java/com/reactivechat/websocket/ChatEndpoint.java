@@ -3,7 +3,7 @@ package com.reactivechat.websocket;
 import com.reactivechat.controller.AuthenticationController;
 import com.reactivechat.controller.ChatMessageController;
 import com.reactivechat.controller.ClientServerMessageController;
-import com.reactivechat.controller.ClientServerMessageControllerImpl;
+import com.reactivechat.controller.impl.ClientServerMessageControllerImpl;
 import com.reactivechat.model.message.AuthenticateRequest;
 import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.MessageType;
@@ -21,7 +21,6 @@ import javax.websocket.server.ServerEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import static com.reactivechat.model.message.MessageType.AUTHENTICATE;
 import static com.reactivechat.model.message.MessageType.LOGOFF;
@@ -30,7 +29,6 @@ import static com.reactivechat.model.message.MessageType.REAUTHENTICATE;
 import static com.reactivechat.model.message.MessageType.SIGNUP;
 import static com.reactivechat.websocket.PayloadEncoder.decodePayload;
 
-@Component
 @ServerEndpoint(
     value = "/chat",
     decoders = {RequestMessageDecoder.class, ResponseMessageDecoder.class},

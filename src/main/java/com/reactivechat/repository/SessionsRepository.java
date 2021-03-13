@@ -11,7 +11,7 @@ public interface SessionsRepository {
     User reauthenticate(final Session session, final String token);
     boolean sessionIsAuthenticated(final Session session, final String token);
     void delete(final Session session);
-    List<Session> findByUser(final User user);
+    List<Session> findByUser(final String userId);
     List<Session> findAll();
     User findBySessionId(final String sessionId);
     

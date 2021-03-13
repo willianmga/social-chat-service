@@ -1,7 +1,8 @@
-package com.reactivechat.repository;
+package com.reactivechat.repository.impl;
 
 import com.reactivechat.exception.ChatException;
 import com.reactivechat.model.User;
+import com.reactivechat.repository.SessionsRepository;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -17,7 +18,7 @@ import org.springframework.stereotype.Component;
 public class InMemorySessionsRepository implements SessionsRepository {
     
     private final Map<String, User> sessionIdToUserMap;
-    private final Map<User, List<Session>> userToSessionsMap;
+    private final Map<String, List<Session>> userToSessionsMap;
     private final Map<String, List<String>> authenticatedSessionsMap;
     
     public InMemorySessionsRepository() {
@@ -28,10 +29,10 @@ public class InMemorySessionsRepository implements SessionsRepository {
     
     public void create(final User user, final Session session) {
     
-        final List<Session> userSessions = userToSessionsMap.getOrDefault(user, new ArrayList<>());
+        final List<Session> userSessions = userToSessionsMap.getOrDefault(user.getId(), new ArrayList<>());
         userSessions.add(session);
         
-        userToSessionsMap.put(user, userSessions);
+        userToSessionsMap.put(user.getId(), userSessions);
         sessionIdToUserMap.put(session.getId(), user);
 
     }
@@ -95,7 +96,7 @@ public class InMemorySessionsRepository implements SessionsRepository {
                 authenticatedSessionsMap.remove(entry.getKey());
             });
     
-        final List<Entry<User, List<Session>>> userToSessionEntries = userToSessionsMap
+        final List<Entry<String, List<Session>>> userToSessionEntries = userToSessionsMap
             .entrySet()
             .stream()
             .filter(entry -> entry.getValue().contains(session))
@@ -118,9 +119,9 @@ public class InMemorySessionsRepository implements SessionsRepository {
     }
     
     @Override
-    public List<Session> findByUser(final User user) {
+    public List<Session> findByUser(final String userId) {
     
-        final List<Session> sessions = userToSessionsMap.get(user);
+        final List<Session> sessions = userToSessionsMap.get(userId);
         
         if (sessions == null || sessions.isEmpty()) {
             throw new ChatException("User is not connected to server");

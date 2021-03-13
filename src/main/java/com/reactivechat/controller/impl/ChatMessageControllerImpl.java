@@ -1,5 +1,7 @@
-package com.reactivechat.controller;
+package com.reactivechat.controller.impl;
 
+import com.reactivechat.controller.ChatMessageController;
+import com.reactivechat.controller.MessageBroadcasterController;
 import com.reactivechat.model.Contact;
 import com.reactivechat.model.Group;
 import com.reactivechat.model.User;
@@ -7,18 +9,19 @@ import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.ChatMessage.DestinationType;
 import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ResponseMessage;
-import com.reactivechat.repository.GroupsRepository;
+import com.reactivechat.repository.GroupRepository;
 import com.reactivechat.repository.SessionsRepository;
-import com.reactivechat.repository.UsersRepository;
+import com.reactivechat.repository.UserRepository;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import javax.websocket.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import static com.reactivechat.model.message.MessageType.CONTACTS_LIST;
 import static com.reactivechat.model.message.MessageType.NEW_CONTACT_REGISTERED;
@@ -28,18 +31,18 @@ public class ChatMessageControllerImpl implements ChatMessageController {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatMessageControllerImpl.class);
     
-    private final UsersRepository usersRepository;
-    private final GroupsRepository groupsRepository;
+    private final UserRepository usersRepository;
+    private final GroupRepository groupsRepository;
     private final SessionsRepository sessionsRepository;
     private final MessageBroadcasterController broadcasterController;
     
-    public ChatMessageControllerImpl(final UsersRepository usersRepository,
-                                     final GroupsRepository groupsRepository,
+    public ChatMessageControllerImpl(final UserRepository userRepository,
+                                     final GroupRepository groupRepository,
                                      final SessionsRepository sessionsRepository,
                                      final MessageBroadcasterController broadcasterController) {
         
-        this.usersRepository = usersRepository;
-        this.groupsRepository = groupsRepository;
+        this.usersRepository = userRepository;
+        this.groupsRepository = groupRepository;
         this.sessionsRepository = sessionsRepository;
         this.broadcasterController = broadcasterController;
     }
@@ -60,7 +63,7 @@ public class ChatMessageControllerImpl implements ChatMessageController {
             .build();
         
         if (chatMessage.getDestinationType() == DestinationType.USER) {
-            final User destinationUser = usersRepository.findById(chatMessage.getDestinationId());
+            final User destinationUser = usersRepository.findById(chatMessage.getDestinationId()).block();
             LOGGER.info("Messaged received from user {} to user {}", user.getUsername(), destinationUser.getUsername());
         } else if (chatMessage.getDestinationType() == DestinationType.ALL_USERS_GROUP) {
             LOGGER.info("Messaged received from user {} to all users", user.getName());
@@ -77,11 +80,12 @@ public class ChatMessageControllerImpl implements ChatMessageController {
     
         final User user = sessionsRepository.findBySessionId(session.getId());
         
-        final List<User> userContacts = usersRepository.findContacts(user);
-        final List<Group> groupContacts = groupsRepository.findGroups(user);
-        final List<Contact> allContacts = new ArrayList<>(groupContacts);
-        allContacts.addAll(userContacts);
-    
+        final Flux<User> userContacts = usersRepository.findContacts(user);
+        final Flux<Group> groupContacts = groupsRepository.findGroups(user);
+        final List<Contact> allContacts = Flux.concat(userContacts, groupContacts)
+            .toStream()
+            .collect(Collectors.toList());
+
         ResponseMessage<Object> responseMessage = ResponseMessage
             .builder()
             .type(CONTACTS_LIST)

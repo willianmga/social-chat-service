@@ -1,12 +1,12 @@
-package com.reactivechat.controller;
+package com.reactivechat.controller.impl;
 
-import com.reactivechat.model.User;
+import com.reactivechat.controller.MessageBroadcasterController;
 import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.ChatMessage.DestinationType;
 import com.reactivechat.model.message.Message;
 import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.repository.SessionsRepository;
-import com.reactivechat.repository.UsersRepository;
+import com.reactivechat.repository.UserRepository;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,12 +21,12 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
     
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageBroadcasterControllerImpl.class);
     
-    private final UsersRepository usersRepository;
+    private final UserRepository usersRepository;
     private final SessionsRepository sessionsRepository;
     
     @Autowired
-    public MessageBroadcasterControllerImpl(final UsersRepository usersRepository, final SessionsRepository sessionsRepository) {
-        this.usersRepository = usersRepository;
+    public MessageBroadcasterControllerImpl(final UserRepository userRepository, final SessionsRepository sessionsRepository) {
+        this.usersRepository = userRepository;
         this.sessionsRepository = sessionsRepository;
     }
     
@@ -38,8 +38,7 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
         
         if (DestinationType.USER.equals(destinationType)) {
             
-            final User user = usersRepository.findById(message.getPayload().getDestinationId());
-            broadcastToUser(user, message);
+            broadcastToUser(message.getPayload().getDestinationId(), message);
             
         } else if (DestinationType.ALL_USERS_GROUP.equals(destinationType)) {
 
@@ -65,8 +64,8 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
     }
     
     @Override
-    public void broadcastToUser(final User user, final Message message) {
-        final List<Session> sessions = sessionsRepository.findByUser(user);
+    public void broadcastToUser(final String userId, final Message message) {
+        final List<Session> sessions = sessionsRepository.findByUser(userId);
         broadcastMessageToSessions(sessions, message);
     }
     

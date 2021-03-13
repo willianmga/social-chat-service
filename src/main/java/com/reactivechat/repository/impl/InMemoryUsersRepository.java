@@ -1,9 +1,10 @@
-package com.reactivechat.repository;
+package com.reactivechat.repository.impl;
 
 import com.reactivechat.exception.ChatException;
 import com.reactivechat.exception.ResponseStatus;
 import com.reactivechat.model.Contact.ContactType;
 import com.reactivechat.model.User;
+import com.reactivechat.repository.LegacyUsersRepository;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +14,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 @Component
-public class InMemoryUsersRepository implements UsersRepository {
+public class InMemoryUsersRepository implements LegacyUsersRepository {
 
     private final Map<String, User> idToUsersMap;
     

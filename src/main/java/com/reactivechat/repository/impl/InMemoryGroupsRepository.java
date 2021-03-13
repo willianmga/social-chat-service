@@ -1,12 +1,14 @@
-package com.reactivechat.repository;
+package com.reactivechat.repository.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reactivechat.model.Group;
 import com.reactivechat.model.User;
+import com.reactivechat.repository.LegacyGroupsRepository;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -15,7 +17,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 @Component
-public class InMemoryGroupsRepository implements GroupsRepository {
+public class InMemoryGroupsRepository implements LegacyGroupsRepository {
 
     private final Map<String, Group> idToGroupsMap;
     
@@ -67,8 +69,10 @@ public class InMemoryGroupsRepository implements GroupsRepository {
     }
     
     private static List<Group> readDummyGroups() {
+  
+        return Collections.emptyList();
         
-        try {
+/*        try {
             
             URL resource = InMemoryGroupsRepository.class.getClassLoader().getResource("dummy-groups.json");
             TypeReference<List<Group>> typeReference = new TypeReference<List<Group>>() {};
@@ -77,7 +81,7 @@ public class InMemoryGroupsRepository implements GroupsRepository {
             
         } catch (IOException e) {
             throw new IllegalStateException("Failed to read dummy groups for server");
-        }
+        }*/
         
     }
     
