@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class WebSocketServerConfig {
+public class JettyServerConfig {
 
     @Bean
     public ServerDetails serverDetails() {

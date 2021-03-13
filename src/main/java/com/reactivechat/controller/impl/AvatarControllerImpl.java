@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reactivechat.controller.AvatarController;
 import com.reactivechat.model.Avatar;
-import com.reactivechat.repository.impl.InMemoryUsersRepository;
 import java.io.IOException;
 import java.net.URL;
 import java.security.SecureRandom;
@@ -25,7 +24,7 @@ public class AvatarControllerImpl implements AvatarController {
     
     private static List<Avatar> loadAvailableAvatars() {
         try {
-            URL resource = InMemoryUsersRepository.class.getClassLoader().getResource("user-avatars.json");
+            URL resource = AvatarControllerImpl.class.getClassLoader().getResource("user-avatars.json");
             TypeReference<List<Avatar>> typeReference = new TypeReference<List<Avatar>>() {};
             ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.readValue(resource, typeReference);
