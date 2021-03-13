@@ -2,12 +2,12 @@
 
 Reactive WebSocket server which implements the chat domain and handles the messages sent by the front-end client. 
 
-##FEATURES:
+## FEATURES:
 * Managament of users and chat groups
 * Managament of Authentication and Sessions
 * Receive and Broadcast of Chat messages to chat users
 
-##TECHNOLOGIES
+## TECHNOLOGIES
 * Spring WebFlux and Spring Boot
 * Jetty WebSocket Server
 * MongoDB Database
@@ -16,14 +16,14 @@ Reactive WebSocket server which implements the chat domain and handles the messa
 * Java 8
 * Maven
 
-##LIVE TEST INSTANCE
+## LIVE TEST INSTANCE
 * WebSocket: wss://reactive-chat-back.herokuapp.com/chat
 
-##FRONT-END
+## FRONT-END
 * Live client: https://willianmga.github.io/reactive-chat-front/
 * Repository: https://github.com/willianmga/reactive-chat-front
 
-##TODO:
+## TODO:
 * Move sessions from local memory to MongoDB instance
 * Implement a encrypter/decryper to protect sensetive data such as passwords
 * Group and Contact mapping to User so that a user talks only to whom he wants
