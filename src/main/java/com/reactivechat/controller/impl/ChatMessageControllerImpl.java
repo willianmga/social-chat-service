@@ -9,15 +9,16 @@ import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.ChatMessage.DestinationType;
 import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ResponseMessage;
+import com.reactivechat.model.session.ChatSession;
 import com.reactivechat.repository.GroupRepository;
-import com.reactivechat.repository.LegacySessionsRepository;
+import com.reactivechat.repository.SessionRepository;
 import com.reactivechat.repository.UserRepository;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.websocket.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,72 +32,79 @@ public class ChatMessageControllerImpl implements ChatMessageController {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatMessageControllerImpl.class);
     
-    private final UserRepository usersRepository;
-    private final GroupRepository groupsRepository;
-    private final LegacySessionsRepository sessionsRepository;
+    private final UserRepository userRepository;
+    private final GroupRepository groupRepository;
+    private final SessionRepository sessionRepository;
     private final MessageBroadcasterController broadcasterController;
     
     public ChatMessageControllerImpl(final UserRepository userRepository,
                                      final GroupRepository groupRepository,
-                                     final LegacySessionsRepository sessionsRepository,
+                                     final SessionRepository sessionRepository,
                                      final MessageBroadcasterController broadcasterController) {
         
-        this.usersRepository = userRepository;
-        this.groupsRepository = groupRepository;
-        this.sessionsRepository = sessionsRepository;
+        this.userRepository = userRepository;
+        this.groupRepository = groupRepository;
+        this.sessionRepository = sessionRepository;
         this.broadcasterController = broadcasterController;
     }
     
     @Override
-    public void handleChatMessage(final Session session,
+    public void handleChatMessage(final ChatSession chatSession,
                                   final ChatMessage receivedMessage) {
         
-        final User user = sessionsRepository.findBySessionId(session.getId());
+        final String userId = sessionRepository.findUserBySessionId(chatSession.getId())
+            .block();
 
         final ChatMessage chatMessage = ChatMessage.builder()
             .id(UUID.randomUUID().toString())
-            .from(user.getId())
+            .from(userId)
             .destinationId(receivedMessage.getDestinationId())
             .destinationType(receivedMessage.getDestinationType())
-            .message(receivedMessage.getMessage())
+            .content(receivedMessage.getContent())
             .date(OffsetDateTime.now())
             .build();
         
         if (chatMessage.getDestinationType() == DestinationType.USER) {
-            final User destinationUser = usersRepository.findById(chatMessage.getDestinationId()).block();
-            LOGGER.info("Messaged received from user {} to user {}", user.getUsername(), destinationUser.getUsername());
+            final String destinationUser = chatMessage.getDestinationId();
+            LOGGER.info("Messaged received from user {} to user {}", userId, destinationUser);
         } else if (chatMessage.getDestinationType() == DestinationType.ALL_USERS_GROUP) {
-            LOGGER.info("Messaged received from user {} to all users", user.getName());
+            LOGGER.info("Messaged received from user {} to all users", userId);
         }
     
         ResponseMessage<ChatMessage> responseMessage = new ResponseMessage<>(MessageType.USER_MESSAGE, chatMessage);
 
-        broadcasterController.broadcastChatMessage(session, responseMessage);
+        broadcasterController.broadcastChatMessage(chatSession, responseMessage);
         
     }
     
     @Override
-    public void handleContactsMessage(final Session session) {
+    public void handleContactsMessage(final ChatSession chatSession) {
     
-        final User user = sessionsRepository.findBySessionId(session.getId());
+        final Optional<String> userIdOpt = sessionRepository.findUserBySessionId(chatSession.getId())
+            .blockOptional();
         
-        final Flux<User> userContacts = usersRepository.findContacts(user);
-        final Flux<Group> groupContacts = groupsRepository.findGroups(user);
-        final List<Contact> allContacts = Flux.concat(userContacts, groupContacts)
-            .toStream()
-            .collect(Collectors.toList());
+        if (userIdOpt.isPresent()) {
+    
+            final String userId = userIdOpt.get();
+            final Flux<User> userContacts = userRepository.findContacts(userId);
+            final Flux<Group> groupContacts = groupRepository.findGroups(userId);
+            final List<Contact> allContacts = Flux.concat(userContacts, groupContacts)
+                .toStream()
+                .collect(Collectors.toList());
+    
+            ResponseMessage<Object> responseMessage = ResponseMessage
+                .builder()
+                .type(CONTACTS_LIST)
+                .payload(allContacts)
+                .build();
+    
+            broadcasterController.broadcastToSession(chatSession, responseMessage);
+        }
 
-        ResponseMessage<Object> responseMessage = ResponseMessage
-            .builder()
-            .type(CONTACTS_LIST)
-            .payload(allContacts)
-            .build();
-        
-        broadcasterController.broadcastToSession(session, responseMessage);
     }
     
     @Override
-    public void handleNewContact(final Contact contact, final Session session) {
+    public void handleNewContact(final Contact contact, final ChatSession chatSession) {
     
         ResponseMessage<Object> responseMessage = ResponseMessage
             .builder()
@@ -104,7 +112,7 @@ public class ChatMessageControllerImpl implements ChatMessageController {
             .payload(Collections.singletonList(contact))
             .build();
     
-        broadcasterController.broadcastToAllExceptSession(session, responseMessage);
+        broadcasterController.broadcastToAllExceptSession(chatSession, responseMessage);
         
     }
     

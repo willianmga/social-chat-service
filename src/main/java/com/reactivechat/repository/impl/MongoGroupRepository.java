@@ -45,7 +45,7 @@ public class MongoGroupRepository implements GroupRepository {
     }
     
     @Override
-    public Flux<Group> findGroups(final User user) {
+    public Flux<Group> findGroups(final String userId) {
         return Flux.from(
             mongoCollection.find()
                 .projection(NON_SENSITIVE_FIELDS)

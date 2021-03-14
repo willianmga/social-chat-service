@@ -3,25 +3,34 @@ package com.reactivechat.exception;
 import com.reactivechat.model.message.ErrorMessage;
 import lombok.Getter;
 
+import static com.reactivechat.exception.ResponseStatus.SERVER_ERROR;
+
 @Getter
 public class ChatException extends RuntimeException {
     
+    private static final String SERVER_ERROR_MESSAGE = "A server error happened";
+    
     private final ResponseStatus responseStatus;
     
-    public ChatException(String message) {
-        this(message, ResponseStatus.SERVER_ERROR);
+    public ChatException(final String message) {
+        this(message, SERVER_ERROR);
     }
     
-    public ChatException(String message, ResponseStatus responseStatus) {
+    public ChatException(final String message, final ResponseStatus responseStatus) {
         super(message);
         this.responseStatus = responseStatus;
     }
     
     public ErrorMessage toErrorMessage() {
+        
+        final String errorMessage = (SERVER_ERROR.equals(responseStatus))
+            ? SERVER_ERROR_MESSAGE
+            : getMessage();
+        
         return ErrorMessage
             .builder()
-            .status(this.responseStatus)
-            .message(this.getMessage())
+            .status(responseStatus)
+            .message(errorMessage)
             .build();
     }
     

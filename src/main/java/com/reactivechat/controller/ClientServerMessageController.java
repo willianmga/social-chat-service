@@ -1,12 +1,13 @@
 package com.reactivechat.controller;
 
-import javax.websocket.Session;
+import com.reactivechat.model.session.ChatSession;
 
 public interface ClientServerMessageController {
     
-    void handlePing(Session session);
-    void handleConnected(Session session);
-    void handleDisconnected(Session session);
+    void handlePing(final ChatSession chatSession);
+    void handleConnected(final ChatSession chatSession);
+    void handleDisconnected(final ChatSession chatSession);
+    void handleNotAuthenticated(final ChatSession chatSession);
+    void handleInvalidRequest(final ChatSession chatSession);
     
-    void handleNotAuthenticated(Session session);
 }

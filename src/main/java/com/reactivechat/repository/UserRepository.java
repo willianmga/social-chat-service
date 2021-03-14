@@ -12,7 +12,7 @@ public interface UserRepository {
     
     boolean exists(String username);
     
-    Flux<User> findContacts(final User user);
+    Flux<User> findContacts(final String userId);
     User mapToNonSensitiveDataUser(User user);
     
 }

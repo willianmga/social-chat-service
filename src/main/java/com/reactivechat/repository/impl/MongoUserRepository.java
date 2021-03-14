@@ -1,6 +1,5 @@
 package com.reactivechat.repository.impl;
 
-import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import com.reactivechat.exception.ChatException;
@@ -10,6 +9,8 @@ import com.reactivechat.model.User;
 import com.reactivechat.repository.UserRepository;
 import java.util.UUID;
 import org.bson.conversions.Bson;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
@@ -21,6 +22,8 @@ import static com.mongodb.client.model.Projections.include;
 
 @Repository
 public class MongoUserRepository implements UserRepository {
+    
+    private static final Logger LOGGER = LoggerFactory.getLogger(MongoUserRepository.class);
     
     private static final Bson NON_SENSITIVE_FIELDS =
         fields(include("id", "name", "avatar", "description", "contactType"));
@@ -52,8 +55,9 @@ public class MongoUserRepository implements UserRepository {
             .contactType(ContactType.USER)
             .build();
     
-        InsertOneResult result = Mono.from(mongoCollection.insertOne(newUser))
-            .block();
+        Mono.from(mongoCollection.insertOne(newUser))
+            .doOnSuccess(result -> LOGGER.info("Inserted user {}", result.getInsertedId()))
+            .subscribe();
     
         return Mono.just(newUser);
     }
@@ -90,14 +94,14 @@ public class MongoUserRepository implements UserRepository {
     }
     
     @Override
-    public Flux<User> findContacts(final User userToFind) {
+    public Flux<User> findContacts(final String userId) {
         return Flux
             .from(
                 mongoCollection
                     .find()
                     .projection(NON_SENSITIVE_FIELDS)
             )
-            .filter(user -> !user.getId().equals(userToFind.getId()));
+            .filter(user -> !user.getId().equals(userId));
     }
     
     @Override

@@ -3,13 +3,13 @@ package com.reactivechat.controller;
 import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.Message;
 import com.reactivechat.model.message.ResponseMessage;
-import javax.websocket.Session;
+import com.reactivechat.model.session.ChatSession;
 
 public interface MessageBroadcasterController {
     
-    void broadcastChatMessage(Session session, ResponseMessage<ChatMessage> message);
-    void broadcastToAllExceptSession(final Session session, final Message message);
+    void broadcastChatMessage(final ChatSession chatSession, final ResponseMessage<ChatMessage> message);
+    void broadcastToAllExceptSession(final ChatSession chatSession, final Message message);
     void broadcastToUser(final String userId, final Message message);
-    void broadcastToSession(final Session session, final Message message);
+    void broadcastToSession(final ChatSession chatSession, final Message message);
     
 }

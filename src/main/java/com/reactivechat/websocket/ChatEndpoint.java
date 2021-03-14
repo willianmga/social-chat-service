@@ -10,8 +10,9 @@ import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ReauthenticateRequest;
 import com.reactivechat.model.message.RequestMessage;
 import com.reactivechat.model.message.SignupRequest;
-import java.util.Arrays;
-import java.util.List;
+import com.reactivechat.model.session.ChatSession;
+import com.reactivechat.repository.SessionRepository;
+import java.util.Optional;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
@@ -22,11 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import static com.reactivechat.model.message.MessageType.AUTHENTICATE;
-import static com.reactivechat.model.message.MessageType.LOGOFF;
-import static com.reactivechat.model.message.MessageType.PING;
-import static com.reactivechat.model.message.MessageType.REAUTHENTICATE;
-import static com.reactivechat.model.message.MessageType.SIGNUP;
 import static com.reactivechat.websocket.PayloadEncoder.decodePayload;
 
 @ServerEndpoint(
@@ -37,85 +33,98 @@ import static com.reactivechat.websocket.PayloadEncoder.decodePayload;
 public class ChatEndpoint {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatEndpoint.class);
-    private static final List<MessageType> WHITELISTED_MESSAGE_TYPES = Arrays.asList(PING, LOGOFF, AUTHENTICATE, REAUTHENTICATE, SIGNUP);
     
     private final AuthenticationController authenticationController;
     private final ChatMessageController chatMessageController;
     private final ClientServerMessageController clientServerMessageController;
+    private final SessionRepository sessionRepository;
     
     @Autowired
     public ChatEndpoint(final AuthenticationController authenticationController,
                         final ChatMessageController chatMessageController,
-                        final ClientServerMessageControllerImpl clientServerMessageController) {
+                        final ClientServerMessageControllerImpl clientServerMessageController,
+                        final SessionRepository sessionRepository) {
         
         this.authenticationController = authenticationController;
         this.chatMessageController = chatMessageController;
         this.clientServerMessageController = clientServerMessageController;
+        this.sessionRepository = sessionRepository;
     }
     
     @OnOpen
     public void onOpen(final Session session) {
-        clientServerMessageController.handleConnected(session);
-        LOGGER.info("Session {} connected", session.getId());
+        clientServerMessageController.handleConnected(ChatSession.fromSession(session));
+        LOGGER.info("Connection opened: {}", session.getId());
     }
 
     @OnMessage
     public void onMessage(final Session session, final RequestMessage<?> requestMessage) {
     
-        final MessageType messageType = requestMessage.getType();
-    
-        if (!WHITELISTED_MESSAGE_TYPES.contains(messageType)) {
-            if (authenticationController.isAuthenticatedSession(session, requestMessage.getToken())) {
-                handleBlackListedMessages(session, requestMessage, messageType);
-            } else {
-                clientServerMessageController.handleNotAuthenticated(session);
-            }
-        } else {
-            handleWhiteListed(session, requestMessage, messageType);
+        if (requestMessage == null || requestMessage.getType() == null) {
+            clientServerMessageController.handleInvalidRequest(ChatSession.fromSession(session));
+            return;
         }
         
+        final MessageType messageType = requestMessage.getType();
+    
+        if (!messageType.isWhitelisted()) {
+        
+            final Optional<ChatSession> chatSessionOpt = sessionRepository.findByConnectionId(session.getId())
+                .blockOptional();
+    
+            if (chatSessionOpt.isPresent() && chatSessionOpt.get().isAuthenticated()) {
+                handleBlackListedMessages(chatSessionOpt.get(), requestMessage, messageType);
+            } else {
+                clientServerMessageController.handleNotAuthenticated(ChatSession.fromSession(session));
+            }
+    
+        } else {
+            handleWhiteListedMessages(ChatSession.fromSession(session), requestMessage, messageType);
+        }
+    
     }
 
-    private void handleBlackListedMessages(final Session session,
+    private void handleBlackListedMessages(final ChatSession chatSession,
                                            final RequestMessage<?> requestMessage,
                                            final MessageType messageType) {
-        
+
         switch (messageType) {
             case USER_MESSAGE:
                 chatMessageController
-                    .handleChatMessage(session, decodePayload(requestMessage.getPayload(), ChatMessage.class));
+                    .handleChatMessage(chatSession, decodePayload(requestMessage.getPayload(), ChatMessage.class));
                 break;
             case CONTACTS_LIST:
                 chatMessageController
-                    .handleContactsMessage(session);
+                    .handleContactsMessage(chatSession);
                 break;
-            default: LOGGER.error("Unable to handle message of type {}", messageType.name());
+            default:
+                LOGGER.error("Unable to handle message of type {}", messageType.name());
         }
         
     }
     
-    private void handleWhiteListed(final Session session,
-                                   final RequestMessage<?> requestMessage,
-                                   final MessageType messageType) {
+    private void handleWhiteListedMessages(final ChatSession chatSession,
+                                           final RequestMessage<?> requestMessage,
+                                           final MessageType messageType) {
     
         switch (messageType) {
             case AUTHENTICATE:
                 authenticationController
-                    .handleAuthenticate(decodePayload(requestMessage.getPayload(), AuthenticateRequest.class), session);
+                    .handleAuthenticate(decodePayload(requestMessage.getPayload(), AuthenticateRequest.class), chatSession);
                 break;
             case REAUTHENTICATE:
                 authenticationController
-                    .handleReauthenticate(decodePayload(requestMessage.getPayload(), ReauthenticateRequest.class), session);
+                    .handleReauthenticate(decodePayload(requestMessage.getPayload(), ReauthenticateRequest.class), chatSession);
                 break;
             case SIGNUP:
                 authenticationController
-                    .handleSignup(decodePayload(requestMessage.getPayload(), SignupRequest.class), session);
+                    .handleSignup(decodePayload(requestMessage.getPayload(), SignupRequest.class), chatSession);
                 break;
             case PING:
-                clientServerMessageController.handlePing(session);
+                clientServerMessageController.handlePing(chatSession);
                 break;
             case LOGOFF:
-                authenticationController.logoff(session);
+                authenticationController.logoff(chatSession);
                 break;
             default: LOGGER.error("Unable to handle message of type {}", messageType.name());
         }
@@ -124,13 +133,13 @@ public class ChatEndpoint {
     
     @OnClose
     public void onClose(final Session session) {
-        LOGGER.info("Session {} closed", session.getId());
+        clientServerMessageController.handleDisconnected(ChatSession.fromSession(session));
+        LOGGER.info("Connection closed: {}", session.getId());
     }
     
     @OnError
     public void onError(final Session session, final Throwable throwable) {
-        LOGGER.error("Error occurred during session {}. Reason {}", session.getId(), throwable.getMessage());
-        throwable.printStackTrace();
+        LOGGER.error("Error occurred during connection {}. Reason {}", session.getId(), throwable.getMessage());
     }
 
 }

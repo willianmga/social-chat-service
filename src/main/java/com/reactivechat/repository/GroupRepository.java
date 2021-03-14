@@ -9,6 +9,6 @@ import reactor.core.publisher.Mono;
 public interface GroupRepository {
     
     Mono<Group> create(final Group group);
-    Flux<Group> findGroups(final User user);
+    Flux<Group> findGroups(final String userId);
     
 }
