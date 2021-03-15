@@ -33,6 +33,9 @@ import static com.reactivechat.exception.ResponseStatus.INVALID_CREDENTIALS;
 import static com.reactivechat.exception.ResponseStatus.INVALID_NAME;
 import static com.reactivechat.exception.ResponseStatus.INVALID_PASSWORD;
 import static com.reactivechat.exception.ResponseStatus.INVALID_USERNAME;
+import static com.reactivechat.model.session.ChatSession.Status.AUTHENTICATED;
+import static com.reactivechat.model.session.ChatSession.Type.AUTHENTICATE;
+import static com.reactivechat.model.session.ChatSession.Type.REAUTHENTICATE;
 
 @Service
 public class AuthenticationControllerImpl implements AuthenticationController {
@@ -100,7 +103,15 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     
         try {
     
-            final String userId = sessionRepository.reauthenticate(chatSession, reauthenticateRequest.getToken())
+            final ChatSession newSession = chatSession.from()
+                .id(UUID.randomUUID().toString())
+                .serverDetails(serverDetails)
+                .startDate(OffsetDateTime.now().toString())
+                .status(AUTHENTICATED)
+                .type(REAUTHENTICATE)
+                .build();
+            
+            final String userId = sessionRepository.reauthenticate(newSession, reauthenticateRequest.getToken())
                 .block();
     
             final User user = userRepository.findById(userId)
@@ -121,11 +132,17 @@ public class AuthenticationControllerImpl implements AuthenticationController {
         
             broadcasterController.broadcastToSession(chatSession, responseMessage);
     
-            LOGGER.info("Session {} reauthenticated with token {} of user {}", chatSession.getId(), reauthenticateRequest.getToken(), user.getUsername());
+            LOGGER.info("Session {} reauthenticated with token {} of user {}",
+                newSession.getId(),
+                reauthenticateRequest.getToken(),
+                user.getUsername()
+            );
             
         } catch (ChatException e) {
         
-            LOGGER.error("Failed to reauthenticate with token {}. Reason: {}", reauthenticateRequest.getToken(), e.getMessage());
+            LOGGER.error("Failed to reauthenticate with token {}. Reason: {}",
+                reauthenticateRequest.getToken(), e.getMessage()
+            );
             
             final ResponseMessage<Object> responseMessage = ResponseMessage
                 .builder()
@@ -201,6 +218,8 @@ public class AuthenticationControllerImpl implements AuthenticationController {
                     .serverDetails(serverDetails)
                     .userDeviceDetails(authenticateRequest.getUserDeviceDetails())
                     .startDate(OffsetDateTime.now().toString())
+                    .status(AUTHENTICATED)
+                    .type(AUTHENTICATE)
                     .build();
     
                 final User user = userOpt.get();

@@ -1,19 +1,26 @@
 package com.reactivechat.model.session;
 
 import java.util.Objects;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
+import org.bson.codecs.pojo.annotations.BsonCreator;
+import org.bson.codecs.pojo.annotations.BsonProperty;
 
 @Getter
 @Builder
 @ToString
-@AllArgsConstructor
 public class UserAuthenticationDetails {
     
     private final String userId;
     private final String token;
+    
+    @BsonCreator
+    public UserAuthenticationDetails(@BsonProperty("userId") final String userId,
+                                     @BsonProperty("token") final String token) {
+        this.userId = userId;
+        this.token = token;
+    }
     
     @Override
     public boolean equals(Object o) {

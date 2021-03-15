@@ -25,6 +25,7 @@ public class ChatSession {
     private final UserAuthenticationDetails userAuthenticationDetails;
     private final String startDate;
     private final Status status;
+    private final Type type;
     
     @BsonIgnore
     private final Session webSocketSession;
@@ -36,7 +37,8 @@ public class ChatSession {
                        @BsonProperty("userDeviceDetails") UserDeviceDetails userDeviceDetails,
                        @BsonProperty("userAuthenticationDetails") UserAuthenticationDetails userAuthenticationDetails,
                        @BsonProperty("startDate") String startDate,
-                       @BsonProperty("status") Status status) {
+                       @BsonProperty("status") Status status,
+                       @BsonProperty("type") Type type) {
         this.id = id;
         this.connectionId = connectionId;
         this.serverDetails = serverDetails;
@@ -44,6 +46,7 @@ public class ChatSession {
         this.userAuthenticationDetails = userAuthenticationDetails;
         this.startDate = startDate;
         this.status = status;
+        this.type = type;
         this.webSocketSession = null;
     }
     
@@ -65,7 +68,8 @@ public class ChatSession {
     
     @BsonIgnore
     public boolean isOpen() {
-        return webSocketSession.isOpen();
+        return webSocketSession != null &&
+            webSocketSession.isOpen();
     }
     
     @BsonIgnore
@@ -78,7 +82,8 @@ public class ChatSession {
             .serverDetails(serverDetails)
             .webSocketSession(webSocketSession)
             .startDate(startDate)
-            .status(status);
+            .status(status)
+            .type(type);
     }
     
     @Override
@@ -100,6 +105,10 @@ public class ChatSession {
     
     public enum Status {
         NOT_AUTHENTICATED, AUTHENTICATED, LOGGED_OFF
+    }
+    
+    public enum Type {
+        AUTHENTICATE, REAUTHENTICATE
     }
     
 }

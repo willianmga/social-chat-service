@@ -134,7 +134,6 @@ public class ChatEndpoint {
     @OnClose
     public void onClose(final Session session) {
         clientServerMessageController.handleDisconnected(ChatSession.fromSession(session));
-        LOGGER.info("Connection closed: {}", session.getId());
     }
     
     @OnError

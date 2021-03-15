@@ -24,6 +24,9 @@ import static com.mongodb.client.model.Projections.include;
 public class MongoUserRepository implements UserRepository {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoUserRepository.class);
+    private static final String USER_COLLECTION_NAME = "user";
+    private static final String USER_ID = "_id";
+    private static final String USERNAME = "username";
     
     private static final Bson NON_SENSITIVE_FIELDS =
         fields(include("id", "name", "avatar", "description", "contactType"));
@@ -35,7 +38,7 @@ public class MongoUserRepository implements UserRepository {
     
     @Autowired
     public MongoUserRepository(final MongoDatabase mongoDatabase) {
-        this.mongoCollection = mongoDatabase.getCollection("user", User.class);
+        this.mongoCollection = mongoDatabase.getCollection(USER_COLLECTION_NAME, User.class);
     }
     
     @Override
@@ -67,7 +70,7 @@ public class MongoUserRepository implements UserRepository {
         return Mono
             .from(
                 mongoCollection
-                    .find(eq("id", id))
+                    .find(eq(USER_ID, id))
                     .projection(SERVER_REQUIRED_FIELDS)
                     .first()
             );
@@ -77,7 +80,7 @@ public class MongoUserRepository implements UserRepository {
     public Mono<User> findFullDetailsByUsername(final String username) {
         return Mono
             .from(
-                mongoCollection.find(eq("username", username)).first()
+                mongoCollection.find(eq(USERNAME, username)).first()
             );
     }
     
@@ -85,8 +88,8 @@ public class MongoUserRepository implements UserRepository {
     public boolean exists(final String username) {
     
         return Mono.from(
-                mongoCollection.find(eq("username", username))
-                    .projection(fields(include("id")))
+                mongoCollection.find(eq(USERNAME, username))
+                    .projection(fields(include(USER_ID)))
                     .first()
             )
             .blockOptional()
