@@ -60,14 +60,14 @@ public class ChatEndpoint {
     @OnMessage
     public void onMessage(final Session session, final RequestMessage<?> requestMessage) {
     
-        if (requestMessage == null || requestMessage.getType() == null) {
+        if (!validRequestMessage(requestMessage)) {
             clientServerMessageController.handleInvalidRequest(ChatSession.fromSession(session));
             return;
         }
-        
+    
         final MessageType messageType = requestMessage.getType();
     
-        if (!messageType.isWhitelisted()) {
+        if (!messageType.isWhitelisted() && authenticatedRequestMessage(requestMessage)) {
         
             final Optional<ChatSession> chatSessionOpt = sessionRepository.findByConnectionId(session.getId())
                 .blockOptional();
@@ -78,12 +78,22 @@ public class ChatEndpoint {
                 clientServerMessageController.handleNotAuthenticated(ChatSession.fromSession(session));
             }
     
-        } else {
+        } else if (messageType.isWhitelisted()) {
             handleWhiteListedMessages(ChatSession.fromSession(session), requestMessage, messageType);
+        } else {
+            clientServerMessageController.handleInvalidRequest(ChatSession.fromSession(session));
         }
     
     }
-
+    
+    private boolean validRequestMessage(RequestMessage<?> requestMessage) {
+        return requestMessage != null  && requestMessage.getType() != null;
+    }
+    
+    private boolean authenticatedRequestMessage(RequestMessage<?> requestMessage) {
+        return requestMessage.getToken() != null && !requestMessage.getToken().trim().isEmpty();
+    }
+    
     private void handleBlackListedMessages(final ChatSession chatSession,
                                            final RequestMessage<?> requestMessage,
                                            final MessageType messageType) {
