@@ -35,6 +35,7 @@ public class ClientServerMessageControllerImpl implements ClientServerMessageCon
     @Override
     public void handleConnected(final ChatSession chatSession) {
         handle(chatSession, MessageType.CONNECTED);
+        LOGGER.info("Connection opened: {}", chatSession.getConnectionId());
     }
     
     @Override
@@ -59,6 +60,7 @@ public class ClientServerMessageControllerImpl implements ClientServerMessageCon
         handle(chatSession, MessageType.INVALID_REQUEST);
     }
     
+    // TODO: make non blocking
     private void handle(final ChatSession chatSession, final MessageType messageType) {
         
         ResponseMessage<Object> responseMessage = ResponseMessage

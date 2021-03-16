@@ -52,8 +52,7 @@ public class ChatMessageControllerImpl implements ChatMessageController {
     public void handleChatMessage(final ChatSession chatSession,
                                   final ChatMessage receivedMessage) {
         
-        final String userId = sessionRepository.findUserBySessionId(chatSession.getId())
-            .block();
+        final String userId = chatSession.getUserAuthenticationDetails().getUserId();
 
         final ChatMessage chatMessage = ChatMessage.builder()
             .id(UUID.randomUUID().toString())
@@ -80,26 +79,20 @@ public class ChatMessageControllerImpl implements ChatMessageController {
     @Override
     public void handleContactsMessage(final ChatSession chatSession) {
     
-        final Optional<String> userIdOpt = sessionRepository.findUserBySessionId(chatSession.getId())
-            .blockOptional();
-        
-        if (userIdOpt.isPresent()) {
-    
-            final String userId = userIdOpt.get();
-            final Flux<User> userContacts = userRepository.findContacts(userId);
-            final Flux<Group> groupContacts = groupRepository.findGroups(userId);
-            final List<Contact> allContacts = Flux.concat(userContacts, groupContacts)
-                .toStream()
-                .collect(Collectors.toList());
-    
-            ResponseMessage<Object> responseMessage = ResponseMessage
-                .builder()
-                .type(CONTACTS_LIST)
-                .payload(allContacts)
-                .build();
-    
-            broadcasterController.broadcastToSession(chatSession, responseMessage);
-        }
+        final String userId = chatSession.getUserAuthenticationDetails().getUserId();
+        final Flux<User> userContacts = userRepository.findContacts(userId);
+        final Flux<Group> groupContacts = groupRepository.findGroups(userId);
+        final List<Contact> allContacts = Flux.concat(userContacts, groupContacts)
+            .toStream()
+            .collect(Collectors.toList());
+
+        ResponseMessage<Object> responseMessage = ResponseMessage
+            .builder()
+            .type(CONTACTS_LIST)
+            .payload(allContacts)
+            .build();
+
+        broadcasterController.broadcastToSession(chatSession, responseMessage);
 
     }
     

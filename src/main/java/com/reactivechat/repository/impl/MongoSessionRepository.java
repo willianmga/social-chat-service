@@ -5,7 +5,6 @@ import com.mongodb.reactivestreams.client.MongoDatabase;
 import com.reactivechat.exception.ChatException;
 import com.reactivechat.model.User;
 import com.reactivechat.model.session.ChatSession;
-import com.reactivechat.model.session.ServerDetails;
 import com.reactivechat.model.session.UserAuthenticationDetails;
 import com.reactivechat.repository.SessionRepository;
 import java.util.Collections;
@@ -36,35 +35,32 @@ public class MongoSessionRepository implements SessionRepository {
     
     private static final String SESSIONS_COLLECTION = "user_session";
     private static final String CONNECTION_ID = "connectionId";
-    private static final String SESSION_ID = "_id";
     private static final String SERVER_DETAILS = "serverDetails";
     private static final String USER_AUTHENTICATION_DETAILS = "userAuthenticationDetails";
     private static final String TOKEN = USER_AUTHENTICATION_DETAILS + ".token";
     private static final String USER_ID = USER_AUTHENTICATION_DETAILS + ".userId";
     private static final String SESSION_STATUS = "status";
+    private static final String SESSION_TYPE = "type";
     
     private static final Bson SERVER_REQUIRED_FIELDS =
-        fields(include("id", CONNECTION_ID, SERVER_DETAILS, USER_AUTHENTICATION_DETAILS, SESSION_STATUS));
+        fields(include("id", CONNECTION_ID, SERVER_DETAILS, USER_AUTHENTICATION_DETAILS, SESSION_STATUS, SESSION_TYPE));
     
-    private static final Bson AUTHENTICATION_FIELDS =
-        fields(include("userAuthenticationDetails"));
+    private static final Bson SERVER_SEARCH_FIELDS =
+        fields(include("id"));
     
     private final Map<String, Session> connectionsMap;
     private final MongoCollection<ChatSession> mongoCollection;
-    private final ServerDetails serverDetails;
     
     @Autowired
-    public MongoSessionRepository(final MongoDatabase mongoDatabase,
-                                  final ServerDetails serverDetails) {
+    public MongoSessionRepository(final MongoDatabase mongoDatabase) {
         this.mongoCollection = mongoDatabase.getCollection(SESSIONS_COLLECTION, ChatSession.class);
         this.connectionsMap = new HashMap<>();
-        this.serverDetails = serverDetails;
     }
 
     @Override
     public void authenticate(final ChatSession chatSession, final User user, final String token) {
     
-        final Optional<ChatSession> chatSessionOpt = findByActiveToken(token)
+        final Optional<ChatSession> chatSessionOpt = serverSearchByActiveToken(token)
             .blockOptional();
     
         if (chatSessionOpt.isPresent()) {
@@ -93,7 +89,7 @@ public class MongoSessionRepository implements SessionRepository {
     public Mono<String> reauthenticate(final ChatSession chatSession,
                                        final String token) {
 
-        final Optional<ChatSession> chatSessionOpt = findByActiveToken(token)
+        final Optional<ChatSession> chatSessionOpt = serverSearchByActiveToken(token)
             .blockOptional();
     
         if (chatSessionOpt.isPresent()) {
@@ -122,28 +118,6 @@ public class MongoSessionRepository implements SessionRepository {
     }
     
     @Override
-    public Mono<ChatSession> findByConnectionId(final String connectionId) {
-        
-        final Session webSocketSession = connectionsMap.get(connectionId);
-        
-        if (webSocketSession != null) {
-            return Mono.from(
-                mongoCollection
-                    .find(and(
-                        eq(CONNECTION_ID, webSocketSession.getId()),
-                        eq(SESSION_STATUS, AUTHENTICATED.name())
-                        )
-                    )
-                    .projection(SERVER_REQUIRED_FIELDS)
-                    .first()
-                )
-                .map(session -> buildChatSession(session, webSocketSession));
-        }
-        
-        return Mono.empty();
-    }
-    
-    @Override
     public Flux<ChatSession> findByUser(final String userId) {
         return Flux.from(
                 mongoCollection
@@ -153,34 +127,11 @@ public class MongoSessionRepository implements SessionRepository {
             .filter(session -> connectionsMap.containsKey(session.getConnectionId()))
             .map(session -> buildChatSession(session, connectionsMap.get(session.getConnectionId())));
     }
-    
+
     @Override
-    public Mono<String> findUserBySessionId(final String sessionId) {
-    
-        return Mono.from(
-                mongoCollection
-                    .find(and(
-                            eq(SESSION_ID, sessionId),
-                            eq(SESSION_STATUS, AUTHENTICATED.name())
-                        )
-                    )
-                    .projection(AUTHENTICATION_FIELDS)
-                    .first()
-            )
-            .map(session -> session.getUserAuthenticationDetails().getUserId());
-    }
-    
-    @Override
-    public Flux<ChatSession> findAll() {
-    
-        return Flux.from(
-                mongoCollection
-                    .find(eq(SESSION_STATUS, AUTHENTICATED.name()))
-                    .projection(SERVER_REQUIRED_FIELDS)
-            )
-            .filter(session -> connectionsMap.containsKey(session.getConnectionId()))
-            .map(session -> buildChatSession(session, connectionsMap.get(session.getConnectionId())));
-        
+    public Flux<ChatSession> findAllConnections() {
+        return Flux.fromIterable(connectionsMap.values())
+            .map(ChatSession::fromSession);
     }
     
     @Override
@@ -222,15 +173,29 @@ public class MongoSessionRepository implements SessionRepository {
         
     }
     
-    private Mono<ChatSession> findByActiveToken(final String token) {
+    @Override
+    public Mono<ChatSession> findByActiveToken(final String token) {
         return Mono.from(
                 mongoCollection
                     .find(and(
                         eq(TOKEN, token),
                         eq(SESSION_STATUS, AUTHENTICATED.name()))
                     )
+                    .projection(SERVER_REQUIRED_FIELDS)
                     .first()
             );
+    }
+    
+    private Mono<ChatSession> serverSearchByActiveToken(final String token) {
+        return Mono.from(
+            mongoCollection
+                .find(and(
+                    eq(TOKEN, token),
+                    eq(SESSION_STATUS, AUTHENTICATED.name()))
+                )
+                .projection(SERVER_SEARCH_FIELDS)
+                .first()
+        );
     }
     
     private ChatSession buildChatSession(final ChatSession session,

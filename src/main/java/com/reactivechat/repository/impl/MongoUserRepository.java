@@ -31,8 +31,8 @@ public class MongoUserRepository implements UserRepository {
     private static final Bson NON_SENSITIVE_FIELDS =
         fields(include("id", "name", "avatar", "description", "contactType"));
     
-    private static final Bson SERVER_REQUIRED_FIELDS =
-        fields(include("id", "username", "name", "contactType"));
+    private static final Bson CLIENT_REQUIRED_FIELDS =
+        fields(include("id", "username", "name", "contactType", "description", "avatar"));
     
     private final MongoCollection<User> mongoCollection;
     
@@ -71,7 +71,7 @@ public class MongoUserRepository implements UserRepository {
             .from(
                 mongoCollection
                     .find(eq(USER_ID, id))
-                    .projection(SERVER_REQUIRED_FIELDS)
+                    .projection(NON_SENSITIVE_FIELDS)
                     .first()
             );
     }

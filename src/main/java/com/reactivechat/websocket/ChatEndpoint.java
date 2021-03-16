@@ -13,6 +13,7 @@ import com.reactivechat.model.message.SignupRequest;
 import com.reactivechat.model.session.ChatSession;
 import com.reactivechat.repository.SessionRepository;
 import java.util.Optional;
+import java.util.UUID;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
@@ -54,7 +55,6 @@ public class ChatEndpoint {
     @OnOpen
     public void onOpen(final Session session) {
         clientServerMessageController.handleConnected(ChatSession.fromSession(session));
-        LOGGER.info("Connection opened: {}", session.getId());
     }
 
     @OnMessage
@@ -69,8 +69,7 @@ public class ChatEndpoint {
     
         if (!messageType.isWhitelisted() && authenticatedRequestMessage(requestMessage)) {
         
-            final Optional<ChatSession> chatSessionOpt = sessionRepository.findByConnectionId(session.getId())
-                .blockOptional();
+            final Optional<ChatSession> chatSessionOpt = restoreSessionByToken(session, requestMessage);
     
             if (chatSessionOpt.isPresent() && chatSessionOpt.get().isAuthenticated()) {
                 handleBlackListedMessages(chatSessionOpt.get(), requestMessage, messageType);
@@ -86,12 +85,14 @@ public class ChatEndpoint {
     
     }
     
-    private boolean validRequestMessage(RequestMessage<?> requestMessage) {
-        return requestMessage != null  && requestMessage.getType() != null;
+    @OnClose
+    public void onClose(final Session session) {
+        clientServerMessageController.handleDisconnected(ChatSession.fromSession(session));
     }
     
-    private boolean authenticatedRequestMessage(RequestMessage<?> requestMessage) {
-        return requestMessage.getToken() != null && !requestMessage.getToken().trim().isEmpty();
+    @OnError
+    public void onError(final Session session, final Throwable throwable) {
+        LOGGER.error("Error occurred during connection {}. Reason {}", session.getId(), throwable.getMessage());
     }
     
     private void handleBlackListedMessages(final ChatSession chatSession,
@@ -141,14 +142,26 @@ public class ChatEndpoint {
 
     }
     
-    @OnClose
-    public void onClose(final Session session) {
-        clientServerMessageController.handleDisconnected(ChatSession.fromSession(session));
+    private Optional<ChatSession> restoreSessionByToken(final Session session,
+                                                        final RequestMessage<?> requestMessage) {
+        
+        return sessionRepository
+            .findByActiveToken(requestMessage.getToken())
+            .map(existingChatSession -> existingChatSession.from()
+                .id(UUID.randomUUID().toString())
+                .connectionId(session.getId())
+                .webSocketSession(session)
+                .build()
+            )
+            .blockOptional();
+    }
+
+    private boolean validRequestMessage(RequestMessage<?> requestMessage) {
+        return requestMessage != null  && requestMessage.getType() != null;
     }
     
-    @OnError
-    public void onError(final Session session, final Throwable throwable) {
-        LOGGER.error("Error occurred during connection {}. Reason {}", session.getId(), throwable.getMessage());
+    private boolean authenticatedRequestMessage(RequestMessage<?> requestMessage) {
+        return requestMessage.getToken() != null && !requestMessage.getToken().trim().isEmpty();
     }
 
 }
