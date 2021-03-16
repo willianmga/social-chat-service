@@ -4,10 +4,8 @@ import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import com.reactivechat.exception.ChatException;
 import com.reactivechat.exception.ResponseStatus;
-import com.reactivechat.model.contacs.Contact.ContactType;
 import com.reactivechat.model.contacs.User;
 import com.reactivechat.repository.UserRepository;
-import java.util.UUID;
 import org.bson.conversions.Bson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,21 +46,10 @@ public class MongoUserRepository implements UserRepository {
                 throw new ChatException("username already taken", ResponseStatus.USERNAME_IN_USE);
             });
 
-        final User newUser = User.builder()
-            .id(UUID.randomUUID().toString())
-            .username(user.getUsername())
-            .password(user.getPassword())
-            .name(user.getName())
-            .avatar(user.getAvatar())
-            .description(user.getDescription())
-            .contactType(ContactType.USER)
-            .build();
-    
-        Mono.from(mongoCollection.insertOne(newUser))
+        return Mono.from(mongoCollection.insertOne(user))
             .doOnSuccess(result -> LOGGER.info("Inserted user {}", result.getInsertedId()))
-            .subscribe();
-    
-        return Mono.just(newUser);
+            .doOnError(error -> LOGGER.info("Failed to insert user. Reason: {}", error.getMessage()))
+            .flatMap(result -> Mono.just(user));
     }
     
     @Override

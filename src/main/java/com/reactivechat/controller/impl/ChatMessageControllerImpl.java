@@ -1,24 +1,27 @@
 package com.reactivechat.controller.impl;
 
+import com.reactivechat.controller.BroadcasterController;
 import com.reactivechat.controller.ChatMessageController;
-import com.reactivechat.controller.MessageBroadcasterController;
 import com.reactivechat.model.contacs.Contact;
 import com.reactivechat.model.contacs.Group;
 import com.reactivechat.model.contacs.User;
 import com.reactivechat.model.message.ChatMessage;
-import com.reactivechat.model.message.ChatMessage.DestinationType;
 import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.model.session.ChatSession;
 import com.reactivechat.repository.GroupRepository;
+import com.reactivechat.repository.MessageRepository;
 import com.reactivechat.repository.UserRepository;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import static com.reactivechat.model.message.MessageType.CONTACTS_LIST;
 import static com.reactivechat.model.message.MessageType.NEW_CONTACT_REGISTERED;
@@ -27,46 +30,56 @@ import static com.reactivechat.model.message.MessageType.NEW_CONTACT_REGISTERED;
 public class ChatMessageControllerImpl implements ChatMessageController {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatMessageControllerImpl.class);
-    
+
+    private final ExecutorService executorService;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
-    private final MessageBroadcasterController broadcasterController;
+    private final MessageRepository messageRepository;
+    private final BroadcasterController broadcasterController;
     
-    public ChatMessageControllerImpl(final UserRepository userRepository,
+    public ChatMessageControllerImpl(final ExecutorService executorService,
+                                     final UserRepository userRepository,
                                      final GroupRepository groupRepository,
-                                     final MessageBroadcasterController broadcasterController) {
+                                     final MessageRepository messageRepository,
+                                     final BroadcasterController broadcasterController) {
         
+        this.executorService = executorService;
         this.userRepository = userRepository;
         this.groupRepository = groupRepository;
+        this.messageRepository = messageRepository;
         this.broadcasterController = broadcasterController;
     }
     
     @Override
     public void handleChatMessage(final ChatSession chatSession,
                                   final ChatMessage receivedMessage) {
-        
-        final String userId = chatSession.getUserAuthenticationDetails().getUserId();
-
-        final ChatMessage chatMessage = ChatMessage.builder()
-            .id(UUID.randomUUID().toString())
-            .from(userId)
-            .destinationId(receivedMessage.getDestinationId())
-            .destinationType(receivedMessage.getDestinationType())
-            .content(receivedMessage.getContent())
-            .date(OffsetDateTime.now())
-            .build();
-        
-        if (chatMessage.getDestinationType() == DestinationType.USER) {
-            final String destinationUser = chatMessage.getDestinationId();
-            LOGGER.info("Messaged sent from user {} to user {}", userId, destinationUser);
-        } else if (chatMessage.getDestinationType() == DestinationType.ALL_USERS_GROUP) {
-            LOGGER.info("Messaged sent from user {} to all users", userId);
-        }
     
-        ResponseMessage<ChatMessage> responseMessage = new ResponseMessage<>(MessageType.USER_MESSAGE, chatMessage);
+        Mono
+            .fromRunnable(() -> {
+    
+                LOGGER.info("handling chat message");
+                
+                final String userId = chatSession.getUserAuthenticationDetails().getUserId();
+    
+                final ChatMessage chatMessage = ChatMessage.builder()
+                    .id(UUID.randomUUID().toString())
+                    .from(userId)
+                    .date(OffsetDateTime.now().toString())
+                    .destinationId(receivedMessage.getDestinationId())
+                    .destinationType(receivedMessage.getDestinationType())
+                    .content(receivedMessage.getContent())
+                    .mimeType(receivedMessage.getMimeType())
+                    .build();
+    
+                ResponseMessage<ChatMessage> responseMessage = new ResponseMessage<>(MessageType.USER_MESSAGE, chatMessage);
+                
+                messageRepository.insert(chatMessage);
+                broadcasterController.broadcastChatMessage(chatSession, responseMessage);
+                
+            })
+            .publishOn(Schedulers.fromExecutorService(executorService))
+            .subscribe();
 
-        broadcasterController.broadcastChatMessage(chatSession, responseMessage);
-        
     }
     
     @Override

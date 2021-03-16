@@ -2,10 +2,11 @@ package com.reactivechat.controller.impl;
 
 import com.reactivechat.controller.AuthenticationController;
 import com.reactivechat.controller.AvatarController;
+import com.reactivechat.controller.BroadcasterController;
 import com.reactivechat.controller.ChatMessageController;
-import com.reactivechat.controller.MessageBroadcasterController;
 import com.reactivechat.exception.ChatException;
 import com.reactivechat.exception.ResponseStatus;
+import com.reactivechat.model.contacs.Contact.ContactType;
 import com.reactivechat.model.contacs.User;
 import com.reactivechat.model.contacs.UserDTO;
 import com.reactivechat.model.message.AuthenticateRequest;
@@ -16,11 +17,13 @@ import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.model.message.SignupRequest;
 import com.reactivechat.model.session.ChatSession;
 import com.reactivechat.model.session.ServerDetails;
+import com.reactivechat.model.session.UserAuthenticationDetails;
 import com.reactivechat.repository.SessionRepository;
 import com.reactivechat.repository.UserRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.Base64;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,12 +43,13 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticationControllerImpl.class);
     private static final String DEFAULT_DESCRIPTION = "Hi, I'm using SocialChat!";
+    private static final String TOKEN_SEPARATOR = "_";
     
     private final UserRepository userRepository;
     private final SessionRepository sessionRepository;
     private final AvatarController avatarController;
     private final ChatMessageController chatMessageController;
-    private final MessageBroadcasterController broadcasterController;
+    private final BroadcasterController broadcasterController;
     private final ServerDetails serverDetails;
     
     @Autowired
@@ -53,7 +57,7 @@ public class AuthenticationControllerImpl implements AuthenticationController {
                                         final SessionRepository sessionRepository,
                                         final AvatarControllerImpl avatarController,
                                         final ChatMessageController chatMessageController,
-                                        final MessageBroadcasterController broadcasterController,
+                                        final BroadcasterController broadcasterController,
                                         final ServerDetails serverDetails) {
         
         this.userRepository = userRepository;
@@ -79,14 +83,8 @@ public class AuthenticationControllerImpl implements AuthenticationController {
             broadcasterController.broadcastToSession(chatSession, responseMessage);
             
         } catch (ChatException e) {
-
-            broadcasterController.broadcastToSession(
-                chatSession,
-                errorMessage(e, MessageType.AUTHENTICATE)
-            );
-    
+            broadcasterController.broadcastToSession(chatSession, errorMessage(e, MessageType.AUTHENTICATE));
             LOGGER.error("Failed to authenticate user {}. Reason: {}", authenticateRequest.getUsername(), e.getMessage());
-            
         }
 
     }
@@ -126,16 +124,10 @@ public class AuthenticationControllerImpl implements AuthenticationController {
             );
             
         } catch (ChatException e) {
-
-            broadcasterController.broadcastToSession(
-                chatSession,
-                errorMessage(e, MessageType.NOT_AUTHENTICATED)
-            );
-    
+            broadcasterController.broadcastToSession(chatSession, errorMessage(e, MessageType.NOT_AUTHENTICATED));
             LOGGER.error("Failed to reauthenticate with token {}. Reason: {}",
                 reauthenticateRequest.getToken(), e.getMessage()
             );
-        
         }
         
     }
@@ -170,21 +162,30 @@ public class AuthenticationControllerImpl implements AuthenticationController {
                 });
             
         } catch (ChatException e) {
-    
+            broadcasterController.broadcastToSession(chatSession, errorMessage(e, MessageType.SIGNUP));
             LOGGER.error("Failed to create user {}. Reason: {}", signupRequest.getUsername(), e.getMessage());
-    
-            final ResponseMessage<Object> responseMessage = ResponseMessage
-                .builder()
-                .type(MessageType.SIGNUP)
-                .payload(e.toErrorMessage())
-                .build();
-    
-            broadcasterController.broadcastToSession(chatSession, responseMessage);
-            
         }
         
     }
 
+    @Override
+    public Optional<ChatSession> restoreSessionByToken(final ChatSession incompleteSession,
+                                                       final String token) {
+    
+        return sessionRepository
+            .tokenInUse(token)
+            .blockOptional()
+            .flatMap(existingSession -> {
+    
+                final String[] tokenData = new String(Base64.getDecoder().decode(token.getBytes(StandardCharsets.UTF_8)))
+                    .split(TOKEN_SEPARATOR);
+                
+                return (tokenData.length == 3)
+                    ? Optional.of(buildSessionFromToken(incompleteSession, token, tokenData))
+                    : Optional.empty();
+            });
+    }
+    
     @Override
     public void logoff(final ChatSession chatSession) {
         sessionRepository.logoff(chatSession);
@@ -230,12 +231,33 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     }
     
     private String buildToken(final ChatSession session, final User user) {
-        
-        final String token = UUID.randomUUID().toString() + "-" + user.getId() + "-" + session.getId();
+    
+        final String token = session.getId() + TOKEN_SEPARATOR +
+            user.getId() + TOKEN_SEPARATOR +
+            session.getServerDetails().getServerInstanceId();
         
         return Base64
             .getEncoder()
             .encodeToString(token.getBytes(StandardCharsets.UTF_8));
+    }
+    
+    private ChatSession buildSessionFromToken(final ChatSession incompleteSession,
+                                              final String token,
+                                              final String[] tokenData) {
+        return incompleteSession.from()
+            .id(tokenData[0])
+            .userAuthenticationDetails(UserAuthenticationDetails.builder()
+                .token(token)
+                .userId(tokenData[1])
+                .build()
+            )
+            .serverDetails(ServerDetails.builder()
+                .serverInstanceId(tokenData[2])
+                .build()
+            )
+            .type(AUTHENTICATE)
+            .status(AUTHENTICATED)
+            .build();
     }
     
     private void validateSignUpRequest(final SignupRequest signupRequest) {
@@ -265,11 +287,14 @@ public class AuthenticationControllerImpl implements AuthenticationController {
     
     private User mapToUser(final SignupRequest signupRequest) {
         return User.builder()
+            .id(UUID.randomUUID().toString())
             .username(signupRequest.getUsername())
             .password(signupRequest.getPassword())
             .name(signupRequest.getName())
             .avatar(avatarController.pickRandomAvatar())
             .description(DEFAULT_DESCRIPTION)
+            .contactType(ContactType.USER)
+            .createdDate(OffsetDateTime.now().toString())
             .build();
     }
     

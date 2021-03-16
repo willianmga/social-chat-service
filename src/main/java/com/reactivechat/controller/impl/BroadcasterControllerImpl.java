@@ -1,13 +1,12 @@
 package com.reactivechat.controller.impl;
 
-import com.reactivechat.controller.MessageBroadcasterController;
+import com.reactivechat.controller.BroadcasterController;
 import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.ChatMessage.DestinationType;
 import com.reactivechat.model.message.Message;
 import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.model.session.ChatSession;
 import com.reactivechat.repository.SessionRepository;
-import com.reactivechat.repository.UserRepository;
 import java.util.concurrent.ExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,21 +16,18 @@ import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
 @Controller
-public class MessageBroadcasterControllerImpl implements MessageBroadcasterController {
+public class BroadcasterControllerImpl implements BroadcasterController {
     
-    private static final Logger LOGGER = LoggerFactory.getLogger(MessageBroadcasterControllerImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BroadcasterControllerImpl.class);
     
     private final ExecutorService executorService;
-    private final UserRepository usersRepository;
     private final SessionRepository sessionRepository;
     
     @Autowired
-    public MessageBroadcasterControllerImpl(final ExecutorService executorService,
-                                            final UserRepository userRepository,
-                                            final SessionRepository sessionRepository) {
+    public BroadcasterControllerImpl(final ExecutorService executorService,
+                                     final SessionRepository sessionRepository) {
         
         this.executorService = executorService;
-        this.usersRepository = userRepository;
         this.sessionRepository = sessionRepository;
     }
     
@@ -40,19 +36,22 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
                                      final ResponseMessage<ChatMessage> message) {
         
         final DestinationType destinationType = message.getPayload().getDestinationType();
-        
-        if (DestinationType.USER.equals(destinationType)) {
-            
-            broadcastToUser(message.getPayload().getDestinationId(), message);
-            
-        } else if (DestinationType.ALL_USERS_GROUP.equals(destinationType)) {
-
-            broadcastToAllExceptSession(chatSession, message);
-            
-        } else {
-            LOGGER.error("Failed to deliver message to destination type " + destinationType);
-        }
+        final String senderUserId = message.getPayload().getFrom();
+        final String destinationId = message.getPayload().getDestinationId();
     
+        switch (destinationType) {
+            case USER:
+                broadcastToUser(destinationId, message);
+                LOGGER.info("Messaged sent from user {} to user {}", senderUserId, destinationId);
+                break;
+            case ALL_USERS_GROUP:
+                broadcastToAllExceptSession(chatSession, message);
+                LOGGER.info("Messaged sent from user {} to all users", senderUserId);
+                break;
+            default:
+                LOGGER.error("Failed to deliver message to destination type " + destinationType);
+        }
+        
     }
     
     @Override
@@ -61,8 +60,8 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
         
         final Flux<ChatSession> sessions = sessionRepository.findAllConnections()
             .filter(existingSession -> !existingSession.getConnectionId().equals(chatSession.getConnectionId()));
-        
-        broadcastMessageToSessions(sessions, message);
+    
+        broadcast(sessions, message);
         
     }
     
@@ -74,16 +73,16 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
         
         final Flux<ChatSession> sessions = sessionRepository
             .findByUser(userId);
-            
-        broadcastMessageToSessions(sessions, chatMessage);
+    
+        broadcast(sessions, chatMessage);
     }
     
     @Override
     public void broadcastToSession(final ChatSession chatSession, final Message message) {
-        broadcastMessageToSessions(Flux.just(chatSession), message);
+        broadcast(Flux.just(chatSession), message);
     }
     
-    private void broadcastMessageToSessions(final Flux<ChatSession> sessions, final Message message) {
+    private void broadcast(final Flux<ChatSession> sessions, final Message message) {
     
         sessions
             .publishOn(Schedulers.fromExecutorService(executorService))
@@ -91,7 +90,6 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
                 try {
                     if (session.isOpen()) {
                         session.getWebSocketSession().getBasicRemote().sendObject(message);
-                        LOGGER.info("sent message");
                     } else {
                         sessionRepository.deleteConnection(session.getConnectionId());
                         LOGGER.error("Can't send message to session {} because session is not opened", session.getId());

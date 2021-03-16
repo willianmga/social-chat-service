@@ -14,5 +14,6 @@ public interface SessionRepository {
     Flux<ChatSession> findByUser(final String userId);
     Flux<ChatSession> findAllConnections();
     Mono<ChatSession> findByActiveToken(final String token);
+    Mono<ChatSession> tokenInUse(String token);
     
 }

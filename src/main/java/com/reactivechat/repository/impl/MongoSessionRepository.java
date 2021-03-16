@@ -97,6 +97,7 @@ public class MongoSessionRepository implements SessionRepository {
         final Session webSocketSession = chatSession.getWebSocketSession();
         connectionsMap.put(webSocketSession.getId(), webSocketSession);
 
+        // TODO: use same thread
         Mono.from(mongoCollection.insertOne(newSession))
             .doOnError(error -> LOGGER.error("Failed to insert reauthenticated session. Reason: {} ", error.getMessage()))
             .doOnSuccess(result -> LOGGER.info("Inserted reauthenticate session {}", result.getInsertedId()))
@@ -175,7 +176,8 @@ public class MongoSessionRepository implements SessionRepository {
             );
     }
     
-    private Mono<ChatSession> tokenInUse(final String token) {
+    @Override
+    public Mono<ChatSession> tokenInUse(final String token) {
         return Mono.from(
                 mongoCollection
                     .find(and(

@@ -24,7 +24,7 @@ Reactive WebSocket server which implements the chat domain and handles the messa
 * Repository: https://github.com/willianmga/reactive-chat-front
 
 ## TODO:
-* Move sessions from local memory to MongoDB instance
+* Remove the need to check database in order to validate request token
 * Implement a encrypter/decryper to protect sensetive data such as passwords
 * Group and Contact mapping to User so that a user talks only to whom he wants
 * Move from Maven to Gradle
