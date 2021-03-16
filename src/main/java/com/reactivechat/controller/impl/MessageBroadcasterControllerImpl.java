@@ -91,6 +91,7 @@ public class MessageBroadcasterControllerImpl implements MessageBroadcasterContr
                 try {
                     if (session.isOpen()) {
                         session.getWebSocketSession().getBasicRemote().sendObject(message);
+                        LOGGER.info("sent message");
                     } else {
                         sessionRepository.deleteConnection(session.getConnectionId());
                         LOGGER.error("Can't send message to session {} because session is not opened", session.getId());
