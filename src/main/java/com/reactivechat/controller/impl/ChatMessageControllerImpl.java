@@ -11,12 +11,10 @@ import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.model.session.ChatSession;
 import com.reactivechat.repository.GroupRepository;
-import com.reactivechat.repository.SessionRepository;
 import com.reactivechat.repository.UserRepository;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -34,17 +32,14 @@ public class ChatMessageControllerImpl implements ChatMessageController {
     
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
-    private final SessionRepository sessionRepository;
     private final MessageBroadcasterController broadcasterController;
     
     public ChatMessageControllerImpl(final UserRepository userRepository,
                                      final GroupRepository groupRepository,
-                                     final SessionRepository sessionRepository,
                                      final MessageBroadcasterController broadcasterController) {
         
         this.userRepository = userRepository;
         this.groupRepository = groupRepository;
-        this.sessionRepository = sessionRepository;
         this.broadcasterController = broadcasterController;
     }
     
@@ -65,9 +60,9 @@ public class ChatMessageControllerImpl implements ChatMessageController {
         
         if (chatMessage.getDestinationType() == DestinationType.USER) {
             final String destinationUser = chatMessage.getDestinationId();
-            LOGGER.info("Messaged received from user {} to user {}", userId, destinationUser);
+            LOGGER.info("Messaged sent from user {} to user {}", userId, destinationUser);
         } else if (chatMessage.getDestinationType() == DestinationType.ALL_USERS_GROUP) {
-            LOGGER.info("Messaged received from user {} to all users", userId);
+            LOGGER.info("Messaged sent from user {} to all users", userId);
         }
     
         ResponseMessage<ChatMessage> responseMessage = new ResponseMessage<>(MessageType.USER_MESSAGE, chatMessage);

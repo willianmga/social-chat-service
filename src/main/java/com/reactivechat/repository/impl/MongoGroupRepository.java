@@ -20,16 +20,14 @@ import static com.mongodb.client.model.Projections.include;
 public class MongoGroupRepository implements GroupRepository {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoGroupRepository.class);
-    
     private static final String GROUPS_COLLECTION = "chat_group";
-    
     private static final Bson NON_SENSITIVE_FIELDS =
         fields(include("id", "name", "avatar", "description", "contactType"));
     
     private final MongoCollection<Group> mongoCollection;
     
     @Autowired
-    public MongoGroupRepository(MongoDatabase mongoDatabase) {
+    public MongoGroupRepository(final MongoDatabase mongoDatabase) {
         this.mongoCollection = mongoDatabase.getCollection(GROUPS_COLLECTION, Group.class);
     }
     
@@ -43,8 +41,9 @@ public class MongoGroupRepository implements GroupRepository {
             .build();
     
         Mono.from(mongoCollection.insertOne(newGroup))
+            .doOnSuccess(result -> LOGGER.info("Created group {}", result.getInsertedId()))
             .doOnError(error -> LOGGER.error("Failed to insert group. Reason: {}", error.getMessage()))
-            .subscribe(result -> LOGGER.info("Created group {}", result.getInsertedId()));
+            .subscribe();
         
         return Mono.just(newGroup);
     }
@@ -52,9 +51,9 @@ public class MongoGroupRepository implements GroupRepository {
     @Override
     public Flux<Group> findGroups(final String userId) {
         return Flux.from(
-            mongoCollection.find()
-                .projection(NON_SENSITIVE_FIELDS)
-        );
+                mongoCollection.find()
+                    .projection(NON_SENSITIVE_FIELDS)
+            );
     }
     
 }

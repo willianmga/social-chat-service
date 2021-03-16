@@ -10,7 +10,6 @@ import com.reactivechat.repository.SessionRepository;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import javax.websocket.Session;
 import org.bson.conversions.Bson;
 import org.slf4j.Logger;
@@ -32,7 +31,6 @@ import static com.reactivechat.model.session.ChatSession.Status.LOGGED_OFF;
 public class MongoSessionRepository implements SessionRepository {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoSessionRepository.class);
-    
     private static final String SESSIONS_COLLECTION = "user_session";
     private static final String CONNECTION_ID = "connectionId";
     private static final String SERVER_DETAILS = "serverDetails";
@@ -60,13 +58,12 @@ public class MongoSessionRepository implements SessionRepository {
     @Override
     public void authenticate(final ChatSession chatSession, final User user, final String token) {
     
-        final Optional<ChatSession> chatSessionOpt = serverSearchByActiveToken(token)
-            .blockOptional();
-    
-        if (chatSessionOpt.isPresent()) {
-            throw new ChatException("Failed to authenticate session: Token is already in use by another session");
-        }
-    
+        tokenInUse(token)
+            .blockOptional()
+            .ifPresent((result) -> {
+                throw new ChatException("Failed to authenticate session: Token is already in use by another session");
+            });
+        
         final UserAuthenticationDetails userAuthenticationDetails = UserAuthenticationDetails.builder()
             .userId(user.getId())
             .token(token)
@@ -88,33 +85,25 @@ public class MongoSessionRepository implements SessionRepository {
     @Override
     public Mono<String> reauthenticate(final ChatSession chatSession,
                                        final String token) {
+    
+        final ChatSession existingSession = tokenInUse(token)
+            .blockOptional()
+            .orElseThrow(() -> new ChatException("Token isn't assigned to any session", INVALID_CREDENTIALS));
+    
+        final ChatSession newSession = chatSession.from()
+            .userAuthenticationDetails(existingSession.getUserAuthenticationDetails())
+            .build();
 
-        final Optional<ChatSession> chatSessionOpt = serverSearchByActiveToken(token)
-            .blockOptional();
-    
-        if (chatSessionOpt.isPresent()) {
-    
-            final ChatSession existingSession = chatSessionOpt.get();
-            final ChatSession newSession = chatSession.from()
-                .userAuthenticationDetails(existingSession.getUserAuthenticationDetails())
-                .build();
-    
-            final Session webSocketSession = chatSession.getWebSocketSession();
-            connectionsMap.put(webSocketSession.getId(), webSocketSession);
-    
-            Mono.from(mongoCollection.insertOne(newSession))
-                .doOnError(error ->
-                    LOGGER.error("Failed to insert reauthenticated session. Reason: {} ", error.getMessage())
-                )
-                .doOnSuccess(result ->
-                    LOGGER.info("Inserted reauthenticate session {}", result.getInsertedId())
-                )
-                .subscribe();
+        final Session webSocketSession = chatSession.getWebSocketSession();
+        connectionsMap.put(webSocketSession.getId(), webSocketSession);
 
-            return Mono.just(existingSession.getUserAuthenticationDetails().getUserId());
-        }
-    
-        throw new ChatException("Token isn't assigned to any session", INVALID_CREDENTIALS);
+        Mono.from(mongoCollection.insertOne(newSession))
+            .doOnError(error -> LOGGER.error("Failed to insert reauthenticated session. Reason: {} ", error.getMessage()))
+            .doOnSuccess(result -> LOGGER.info("Inserted reauthenticate session {}", result.getInsertedId()))
+            .subscribe();
+
+        return Mono.just(existingSession.getUserAuthenticationDetails().getUserId());
+
     }
     
     @Override
@@ -186,16 +175,16 @@ public class MongoSessionRepository implements SessionRepository {
             );
     }
     
-    private Mono<ChatSession> serverSearchByActiveToken(final String token) {
+    private Mono<ChatSession> tokenInUse(final String token) {
         return Mono.from(
-            mongoCollection
-                .find(and(
-                    eq(TOKEN, token),
-                    eq(SESSION_STATUS, AUTHENTICATED.name()))
-                )
-                .projection(SERVER_SEARCH_FIELDS)
-                .first()
-        );
+                mongoCollection
+                    .find(and(
+                        eq(TOKEN, token),
+                        eq(SESSION_STATUS, AUTHENTICATED.name()))
+                    )
+                    .projection(SERVER_SEARCH_FIELDS)
+                    .first()
+            );
     }
     
     private ChatSession buildChatSession(final ChatSession session,

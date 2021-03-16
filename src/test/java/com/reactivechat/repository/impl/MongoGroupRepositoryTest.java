@@ -2,7 +2,9 @@ package com.reactivechat.repository.impl;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.concurrent.Callable;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,9 +16,20 @@ import reactor.core.scheduler.Schedulers;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Ignore
 public class MongoGroupRepositoryTest {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoGroupRepositoryTest.class);
+    
+    @Test
+    public void testasd() {
+    
+        Optional.of(Boolean.TRUE)
+            .ifPresent((result) -> {
+                throw new IllegalArgumentException("can't be true");
+            });
+        
+    }
     
     @Test
     public void test() {

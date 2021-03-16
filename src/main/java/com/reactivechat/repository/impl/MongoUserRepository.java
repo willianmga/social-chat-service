@@ -17,6 +17,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.ne;
 import static com.mongodb.client.model.Projections.fields;
 import static com.mongodb.client.model.Projections.include;
 
@@ -30,10 +31,7 @@ public class MongoUserRepository implements UserRepository {
     
     private static final Bson NON_SENSITIVE_FIELDS =
         fields(include("id", "name", "avatar", "description", "contactType"));
-    
-    private static final Bson CLIENT_REQUIRED_FIELDS =
-        fields(include("id", "username", "name", "contactType", "description", "avatar"));
-    
+
     private final MongoCollection<User> mongoCollection;
     
     @Autowired
@@ -42,12 +40,14 @@ public class MongoUserRepository implements UserRepository {
     }
     
     @Override
-    public Mono<User> create(User user) {
+    public Mono<User> create(final User user) {
     
-        if (exists(user.getUsername())) {
-            throw new ChatException("username already taken", ResponseStatus.USERNAME_IN_USE);
-        }
-    
+        usernameExists(user.getUsername())
+            .blockOptional()
+            .ifPresent((result) -> {
+                throw new ChatException("username already taken", ResponseStatus.USERNAME_IN_USE);
+            });
+
         final User newUser = User.builder()
             .id(UUID.randomUUID().toString())
             .username(user.getUsername())
@@ -67,8 +67,7 @@ public class MongoUserRepository implements UserRepository {
     
     @Override
     public Mono<User> findById(final String id) {
-        return Mono
-            .from(
+        return Mono.from(
                 mongoCollection
                     .find(eq(USER_ID, id))
                     .projection(NON_SENSITIVE_FIELDS)
@@ -78,22 +77,11 @@ public class MongoUserRepository implements UserRepository {
     
     @Override
     public Mono<User> findFullDetailsByUsername(final String username) {
-        return Mono
-            .from(
-                mongoCollection.find(eq(USERNAME, username)).first()
-            );
-    }
-    
-    @Override
-    public boolean exists(final String username) {
-    
         return Mono.from(
-                mongoCollection.find(eq(USERNAME, username))
-                    .projection(fields(include(USER_ID)))
+                mongoCollection
+                    .find(eq(USERNAME, username))
                     .first()
-            )
-            .blockOptional()
-            .isPresent();
+            );
     }
     
     @Override
@@ -101,21 +89,18 @@ public class MongoUserRepository implements UserRepository {
         return Flux
             .from(
                 mongoCollection
-                    .find()
+                    .find(ne(USER_ID, userId))
                     .projection(NON_SENSITIVE_FIELDS)
-            )
-            .filter(user -> !user.getId().equals(userId));
+            );
     }
     
-    @Override
-    public User mapToNonSensitiveDataUser(final User user) {
-        return User.builder()
-            .id(user.getId())
-            .name(user.getName())
-            .description(user.getDescription())
-            .avatar(user.getAvatar())
-            .contactType(user.getContactType())
-            .build();
+    private Mono<User> usernameExists(final String username) {
+        
+        return Mono.from(
+            mongoCollection.find(eq(USERNAME, username))
+                .projection(fields(include(USER_ID)))
+                .first()
+            );
     }
-    
+
 }
