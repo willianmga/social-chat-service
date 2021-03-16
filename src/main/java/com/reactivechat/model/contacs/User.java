@@ -1,4 +1,4 @@
-package com.reactivechat.model;
+package com.reactivechat.model.contacs;
 
 import java.util.Objects;
 import lombok.Builder;
@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.ToString;
 import org.bson.codecs.pojo.annotations.BsonCreator;
 import org.bson.codecs.pojo.annotations.BsonId;
+import org.bson.codecs.pojo.annotations.BsonIgnore;
 import org.bson.codecs.pojo.annotations.BsonProperty;
 
 @Getter
@@ -21,6 +22,7 @@ public class User implements Contact {
     private final String avatar;
     private final String description;
     private final ContactType contactType;
+    private final String createdDate;
     
     @BsonCreator
     public User(@BsonProperty("id") String id,
@@ -29,7 +31,8 @@ public class User implements Contact {
                 @BsonProperty("name") String name,
                 @BsonProperty("avatar") String avatar,
                 @BsonProperty("description") String description,
-                @BsonProperty("contactType") ContactType contactType) {
+                @BsonProperty("contactType") ContactType contactType,
+                @BsonProperty("createdDate") String createdDate) {
         
         this.id = id;
         this.username = username;
@@ -38,6 +41,20 @@ public class User implements Contact {
         this.avatar = avatar;
         this.description = description;
         this.contactType = contactType;
+        this.createdDate = createdDate;
+    }
+    
+    @BsonIgnore
+    public UserBuilder from() {
+        return User.builder()
+            .id(id)
+            .username(username)
+            .password(password)
+            .name(name)
+            .avatar(avatar)
+            .description(description)
+            .contactType(contactType)
+            .createdDate(createdDate);
     }
     
     @Override
@@ -49,13 +66,12 @@ public class User implements Contact {
             return false;
         }
         User user = (User) o;
-        return id.equals(user.id) &&
-            username.equals(user.username);
+        return id.equals(user.id);
     }
     
     @Override
     public int hashCode() {
-        return Objects.hash(id, username);
+        return Objects.hash(id);
     }
     
 }

@@ -2,199 +2,218 @@ package com.reactivechat.controller.impl;
 
 import com.reactivechat.controller.AuthenticationController;
 import com.reactivechat.controller.AvatarController;
+import com.reactivechat.controller.BroadcasterController;
 import com.reactivechat.controller.ChatMessageController;
-import com.reactivechat.controller.MessageBroadcasterController;
 import com.reactivechat.exception.ChatException;
 import com.reactivechat.exception.ResponseStatus;
-import com.reactivechat.model.User;
-import com.reactivechat.model.UserDTO;
+import com.reactivechat.model.contacs.Contact.ContactType;
+import com.reactivechat.model.contacs.User;
+import com.reactivechat.model.contacs.UserDTO;
 import com.reactivechat.model.message.AuthenticateRequest;
 import com.reactivechat.model.message.AuthenticateResponse;
 import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ReauthenticateRequest;
 import com.reactivechat.model.message.ResponseMessage;
 import com.reactivechat.model.message.SignupRequest;
-import com.reactivechat.repository.LegacySessionsRepository;
+import com.reactivechat.model.session.ChatSession;
+import com.reactivechat.model.session.ServerDetails;
+import com.reactivechat.model.session.UserAuthenticationDetails;
+import com.reactivechat.repository.SessionRepository;
 import com.reactivechat.repository.UserRepository;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
-import javax.websocket.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Mono;
 
+import static com.reactivechat.exception.ResponseStatus.INVALID_CREDENTIALS;
 import static com.reactivechat.exception.ResponseStatus.INVALID_NAME;
 import static com.reactivechat.exception.ResponseStatus.INVALID_PASSWORD;
 import static com.reactivechat.exception.ResponseStatus.INVALID_USERNAME;
+import static com.reactivechat.model.session.ChatSession.Status.AUTHENTICATED;
+import static com.reactivechat.model.session.ChatSession.Type.AUTHENTICATE;
+import static com.reactivechat.model.session.ChatSession.Type.REAUTHENTICATE;
 
 @Service
 public class AuthenticationControllerImpl implements AuthenticationController {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticationControllerImpl.class);
     private static final String DEFAULT_DESCRIPTION = "Hi, I'm using SocialChat!";
+    private static final String TOKEN_SEPARATOR = "_";
     
     private final UserRepository userRepository;
-    private final LegacySessionsRepository sessionsRepository;
+    private final SessionRepository sessionRepository;
     private final AvatarController avatarController;
     private final ChatMessageController chatMessageController;
-    private final MessageBroadcasterController broadcasterController;
+    private final BroadcasterController broadcasterController;
+    private final ServerDetails serverDetails;
     
     @Autowired
     public AuthenticationControllerImpl(final UserRepository userRepository,
-                                        final LegacySessionsRepository sessionsRepository,
+                                        final SessionRepository sessionRepository,
                                         final AvatarControllerImpl avatarController,
                                         final ChatMessageController chatMessageController,
-                                        final MessageBroadcasterController broadcasterController) {
+                                        final BroadcasterController broadcasterController,
+                                        final ServerDetails serverDetails) {
+        
         this.userRepository = userRepository;
-        this.sessionsRepository = sessionsRepository;
+        this.sessionRepository = sessionRepository;
         this.avatarController = avatarController;
         this.chatMessageController = chatMessageController;
         this.broadcasterController = broadcasterController;
+        this.serverDetails = serverDetails;
     }
     
     @Override
     public void handleAuthenticate(final AuthenticateRequest authenticateRequest,
-                                   final Session session) {
+                                   final ChatSession chatSession) {
     
         try {
     
-            AuthenticateResponse response = authenticate(authenticateRequest, session);
-    
             final ResponseMessage<Object> responseMessage = ResponseMessage
                 .builder()
                 .type(MessageType.AUTHENTICATE)
-                .payload(response)
+                .payload(authenticate(authenticateRequest, chatSession))
                 .build();
     
-            broadcasterController.broadcastToSession(session, responseMessage);
+            broadcasterController.broadcastToSession(chatSession, responseMessage);
             
         } catch (ChatException e) {
-    
+            broadcasterController.broadcastToSession(chatSession, errorMessage(e, MessageType.AUTHENTICATE));
             LOGGER.error("Failed to authenticate user {}. Reason: {}", authenticateRequest.getUsername(), e.getMessage());
-            
-            final ResponseMessage<Object> responseMessage = ResponseMessage
-                .builder()
-                .type(MessageType.AUTHENTICATE)
-                .payload(e.toErrorMessage())
-                .build();
-    
-            broadcasterController.broadcastToSession(session, responseMessage);
-            
         }
 
     }
     
     @Override
-    public void handleReauthenticate(final ReauthenticateRequest reauthenticateRequest, final Session session) {
+    public void handleReauthenticate(final ReauthenticateRequest reauthenticateRequest, final ChatSession chatSession) {
     
         try {
     
-            final User user = sessionsRepository.reauthenticate(session, reauthenticateRequest.getToken());
-    
-            final AuthenticateResponse authenticateResponse = AuthenticateResponse.builder()
-                .user(mapToUserDTO(user))
-                .token(reauthenticateRequest.getToken())
-                .status(ResponseStatus.SUCCESS)
+            final ChatSession newSession = chatSession.from()
+                .id(UUID.randomUUID().toString())
+                .serverDetails(serverDetails)
+                .startDate(OffsetDateTime.now().toString())
+                .status(AUTHENTICATED)
+                .type(REAUTHENTICATE)
                 .build();
+    
+            final User user = sessionRepository.reauthenticate(newSession, reauthenticateRequest.getToken())
+                .flatMap(userRepository::findById)
+                .blockOptional()
+                .orElseThrow(() -> new ChatException("Couldn't identify user for token", INVALID_CREDENTIALS));
     
             final ResponseMessage<Object> responseMessage = ResponseMessage
                 .builder()
                 .type(MessageType.REAUTHENTICATE)
-                .payload(authenticateResponse)
+                .payload(AuthenticateResponse.builder()
+                    .user(mapToUserDTO(user))
+                    .token(reauthenticateRequest.getToken())
+                    .status(ResponseStatus.SUCCESS)
+                    .build())
                 .build();
         
-            broadcasterController.broadcastToSession(session, responseMessage);
+            broadcasterController.broadcastToSession(chatSession, responseMessage);
     
-            LOGGER.info("Session {} reauthenticated with token {} of user {}", session.getId(), reauthenticateRequest.getToken(), user.getUsername());
+            LOGGER.info("Session {} reauthenticated with token {} of user {}",
+                newSession.getId(), reauthenticateRequest.getToken(), user.getUsername()
+            );
             
         } catch (ChatException e) {
-        
-            LOGGER.error("Failed to reauthenticate with token {}. Reason: {}", reauthenticateRequest.getToken(), e.getMessage());
-            
-            final ResponseMessage<Object> responseMessage = ResponseMessage
-                .builder()
-                .type(MessageType.REAUTHENTICATE)
-                .payload(e.toErrorMessage())
-                .build();
-        
-            broadcasterController.broadcastToSession(session, responseMessage);
-        
+            broadcasterController.broadcastToSession(chatSession, errorMessage(e, MessageType.NOT_AUTHENTICATED));
+            LOGGER.error("Failed to reauthenticate with token {}. Reason: {}",
+                reauthenticateRequest.getToken(), e.getMessage()
+            );
         }
         
     }
     
     @Override
-    public void handleSignup(final SignupRequest signupRequest, final Session session) {
+    public void handleSignup(final SignupRequest signupRequest, final ChatSession chatSession) {
     
         try {
     
             validateSignUpRequest(signupRequest);
             
-            final Mono<User> createdUser = userRepository.create(mapToUser(signupRequest));
+            userRepository
+                .create(mapToUser(signupRequest))
+                .subscribe(createdUser -> {
     
-            AuthenticateRequest authenticateRequest = AuthenticateRequest.builder()
-                .username(signupRequest.getUsername())
-                .password(signupRequest.getPassword())
-                .build();
+                    final AuthenticateRequest authenticateRequest = AuthenticateRequest.builder()
+                        .username(signupRequest.getUsername())
+                        .password(signupRequest.getPassword())
+                        .build();
     
-            AuthenticateResponse authenticateResponse = authenticate(authenticateRequest, session);
+                    final ResponseMessage<Object> responseMessage = ResponseMessage
+                        .builder()
+                        .type(MessageType.SIGNUP)
+                        .payload(authenticate(authenticateRequest, chatSession))
+                        .build();
     
-            final ResponseMessage<Object> responseMessage = ResponseMessage
-                .builder()
-                .type(MessageType.SIGNUP)
-                .payload(authenticateResponse)
-                .build();
+                    broadcasterController.broadcastToSession(chatSession, responseMessage);
+                    chatMessageController.handleNewContact(createdUser, chatSession);
     
-            broadcasterController.broadcastToSession(session, responseMessage);
-            chatMessageController.handleNewContact(createdUser.block(), session);
-    
-            LOGGER.info("New user registered: {}", signupRequest.getUsername());
+                    LOGGER.info("New user registered: {}", signupRequest.getUsername());
+                    
+                });
             
         } catch (ChatException e) {
-    
+            broadcasterController.broadcastToSession(chatSession, errorMessage(e, MessageType.SIGNUP));
             LOGGER.error("Failed to create user {}. Reason: {}", signupRequest.getUsername(), e.getMessage());
-    
-            final ResponseMessage<Object> responseMessage = ResponseMessage
-                .builder()
-                .type(MessageType.SIGNUP)
-                .payload(e.toErrorMessage())
-                .build();
-    
-            broadcasterController.broadcastToSession(session, responseMessage);
-            
         }
         
     }
-    
+
     @Override
-    public boolean isAuthenticatedSession(final Session session, final String token) {
-        return sessionsRepository.sessionIsAuthenticated(session, token);
+    public Optional<ChatSession> restoreSessionByToken(final ChatSession incompleteSession,
+                                                       final String token) {
+    
+        return sessionRepository
+            .tokenInUse(token)
+            .blockOptional()
+            .flatMap(existingSession -> {
+    
+                final String[] tokenData = new String(Base64.getDecoder().decode(token.getBytes(StandardCharsets.UTF_8)))
+                    .split(TOKEN_SEPARATOR);
+                
+                return (tokenData.length == 3)
+                    ? Optional.of(buildSessionFromToken(incompleteSession, token, tokenData))
+                    : Optional.empty();
+            });
     }
     
     @Override
-    public void logoff(final Session session) {
-        sessionsRepository.delete(session);
+    public void logoff(final ChatSession chatSession) {
+        sessionRepository.logoff(chatSession);
     }
     
-    private AuthenticateResponse authenticate(final AuthenticateRequest authenticateRequest, final Session session) {
+    private AuthenticateResponse authenticate(final AuthenticateRequest authenticateRequest, final ChatSession chatSession) {
         
-        Optional<User> userOpt = userRepository.findFullDetailsByUsername(authenticateRequest.getUsername())
-            .blockOptional();
+        final User user = userRepository.findFullDetailsByUsername(authenticateRequest.getUsername())
+            .blockOptional()
+            .orElseThrow(() -> new ChatException("Invalid Credentials", INVALID_CREDENTIALS));
         
-        if (userOpt.isPresent() && userOpt.get().getPassword().equals(authenticateRequest.getPassword())) {
+        if (user.getPassword().equals(authenticateRequest.getPassword())) {
             
             try {
+    
+                final ChatSession newSession = chatSession.from()
+                    .id(UUID.randomUUID().toString())
+                    .serverDetails(serverDetails)
+                    .userDeviceDetails(authenticateRequest.getUserDeviceDetails())
+                    .startDate(OffsetDateTime.now().toString())
+                    .status(AUTHENTICATED)
+                    .type(AUTHENTICATE)
+                    .build();
+    
+                final String token = buildToken(newSession, user);
+                sessionRepository.authenticate(newSession, user, token);
                 
-                User user = userOpt.get();
-                String token = buildToken(session, user);
-                sessionsRepository.create(user, session);
-                sessionsRepository.authenticate(session, token);
-                
-                LOGGER.info("New session created: {}", session.getId());
+                LOGGER.info("New session authenticated: {}", newSession.getId());
                 
                 return AuthenticateResponse.builder()
                     .user(mapToUserDTO(user))
@@ -207,17 +226,38 @@ public class AuthenticationControllerImpl implements AuthenticationController {
             }
             
         }
-        
-        throw new ChatException("Invalid Credentials", ResponseStatus.INVALID_CREDENTIALS);
+    
+        throw new ChatException("Invalid Credentials", INVALID_CREDENTIALS);
     }
     
-    private String buildToken(final Session session, final User user) {
-        
-        final String token = UUID.randomUUID().toString() + "-" + user.getId() + "-" + session.getId();
+    private String buildToken(final ChatSession session, final User user) {
+    
+        final String token = session.getId() + TOKEN_SEPARATOR +
+            user.getId() + TOKEN_SEPARATOR +
+            session.getServerDetails().getServerInstanceId();
         
         return Base64
             .getEncoder()
             .encodeToString(token.getBytes(StandardCharsets.UTF_8));
+    }
+    
+    private ChatSession buildSessionFromToken(final ChatSession incompleteSession,
+                                              final String token,
+                                              final String[] tokenData) {
+        return incompleteSession.from()
+            .id(tokenData[0])
+            .userAuthenticationDetails(UserAuthenticationDetails.builder()
+                .token(token)
+                .userId(tokenData[1])
+                .build()
+            )
+            .serverDetails(ServerDetails.builder()
+                .serverInstanceId(tokenData[2])
+                .build()
+            )
+            .type(AUTHENTICATE)
+            .status(AUTHENTICATED)
+            .build();
     }
     
     private void validateSignUpRequest(final SignupRequest signupRequest) {
@@ -236,13 +276,25 @@ public class AuthenticationControllerImpl implements AuthenticationController {
         
     }
     
+    private ResponseMessage<Object> errorMessage(final ChatException exception, final MessageType messageType) {
+        return ResponseMessage
+            .builder()
+            .type(messageType)
+            .payload(exception.toErrorMessage())
+            .build();
+        
+    }
+    
     private User mapToUser(final SignupRequest signupRequest) {
         return User.builder()
+            .id(UUID.randomUUID().toString())
             .username(signupRequest.getUsername())
             .password(signupRequest.getPassword())
             .name(signupRequest.getName())
             .avatar(avatarController.pickRandomAvatar())
             .description(DEFAULT_DESCRIPTION)
+            .contactType(ContactType.USER)
+            .createdDate(OffsetDateTime.now().toString())
             .build();
     }
     

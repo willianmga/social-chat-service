@@ -1,18 +1,23 @@
 package com.reactivechat.model.session;
 
 import java.util.Objects;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
+import org.bson.codecs.pojo.annotations.BsonCreator;
+import org.bson.codecs.pojo.annotations.BsonProperty;
 
 @Builder
 @Getter
 @ToString
-@AllArgsConstructor
 public class ServerDetails {
     
     private final String serverInstanceId;
+    
+    @BsonCreator
+    public ServerDetails(@BsonProperty("serverInstanceId") String serverInstanceId) {
+        this.serverInstanceId = serverInstanceId;
+    }
     
     @Override
     public boolean equals(Object o) {

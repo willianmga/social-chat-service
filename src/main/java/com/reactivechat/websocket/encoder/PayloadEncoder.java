@@ -1,4 +1,4 @@
-package com.reactivechat.websocket;
+package com.reactivechat.websocket.encoder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;

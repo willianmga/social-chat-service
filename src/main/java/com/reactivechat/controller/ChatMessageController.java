@@ -1,13 +1,13 @@
 package com.reactivechat.controller;
 
-import com.reactivechat.model.Contact;
+import com.reactivechat.model.contacs.Contact;
 import com.reactivechat.model.message.ChatMessage;
-import javax.websocket.Session;
+import com.reactivechat.model.session.ChatSession;
 
 public interface ChatMessageController {
 
-    void handleChatMessage(final Session session, final ChatMessage chatMessage);
-    void handleContactsMessage(Session session);
-    void handleNewContact(final Contact contact, final Session session);
+    void handleChatMessage(final ChatSession chatSession, final ChatMessage chatMessage);
+    void handleContactsMessage(ChatSession chatSession);
+    void handleNewContact(final Contact contact, final ChatSession chatSession);
     
 }

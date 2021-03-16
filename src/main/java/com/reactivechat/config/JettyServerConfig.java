@@ -2,7 +2,7 @@ package com.reactivechat.config;
 
 import com.reactivechat.controller.AuthenticationController;
 import com.reactivechat.controller.ChatMessageController;
-import com.reactivechat.controller.impl.ClientServerMessageControllerImpl;
+import com.reactivechat.controller.impl.ServerMessageControllerImpl;
 import com.reactivechat.model.session.ServerDetails;
 import com.reactivechat.server.JettyEmbeddedWebSocketServer;
 import com.reactivechat.server.ServerEndpointConfigurator;
@@ -26,7 +26,7 @@ public class JettyServerConfig {
     @Bean
     public ChatEndpoint chatEndpoint(final AuthenticationController authenticationController,
                                      final ChatMessageController chatMessageController,
-                                     final ClientServerMessageControllerImpl clientServerMessageController) {
+                                     final ServerMessageControllerImpl clientServerMessageController) {
         
         return new ChatEndpoint(authenticationController, chatMessageController, clientServerMessageController);
     }

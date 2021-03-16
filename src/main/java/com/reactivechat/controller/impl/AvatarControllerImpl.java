@@ -3,7 +3,7 @@ package com.reactivechat.controller.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reactivechat.controller.AvatarController;
-import com.reactivechat.model.Avatar;
+import com.reactivechat.model.contacs.Avatar;
 import java.io.IOException;
 import java.net.URL;
 import java.security.SecureRandom;
