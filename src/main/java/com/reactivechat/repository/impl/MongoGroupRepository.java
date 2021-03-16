@@ -1,8 +1,10 @@
 package com.reactivechat.repository.impl;
 
+import com.mongodb.client.model.Filters;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import com.reactivechat.model.contacs.Group;
+import com.reactivechat.model.message.ChatMessage.DestinationType;
 import com.reactivechat.repository.GroupRepository;
 import java.util.UUID;
 import org.bson.conversions.Bson;
@@ -21,8 +23,10 @@ public class MongoGroupRepository implements GroupRepository {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoGroupRepository.class);
     private static final String GROUPS_COLLECTION = "chat_group";
+    private static final String GROUP_ID = "_id";
+    private static final String CONTACT_TYPE = "contactType";
     private static final Bson NON_SENSITIVE_FIELDS =
-        fields(include("id", "name", "avatar", "description", "contactType"));
+        fields(include("id", "name", "avatar", "description", CONTACT_TYPE));
     
     private final MongoCollection<Group> mongoCollection;
     
@@ -54,6 +58,15 @@ public class MongoGroupRepository implements GroupRepository {
                 mongoCollection.find()
                     .projection(NON_SENSITIVE_FIELDS)
             );
+    }
+    
+    @Override
+    public Mono<DestinationType> findDestinationType(final String groupId) {
+        return Mono.from(
+                mongoCollection.find(Filters.eq(GROUP_ID, groupId))
+                    .projection(fields(include(CONTACT_TYPE)))
+            )
+            .map(group -> DestinationType.GROUP);
     }
     
 }

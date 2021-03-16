@@ -127,7 +127,9 @@ public class ChatMessageControllerImpl implements ChatMessageController {
         
         final String senderId = chatSession.getUserAuthenticationDetails().getUserId();
         
-        messageRepository.findMessages(senderId, chatHistoryRequest)
+        userRepository.findDestinationType(chatHistoryRequest.getDestinationId())
+            .switchIfEmpty(groupRepository.findDestinationType(chatHistoryRequest.getDestinationId()))
+            .flatMapMany(destinationType -> messageRepository.findMessages(senderId, destinationType, chatHistoryRequest))
             .collectList()
             .subscribe(chatHistory -> {
     

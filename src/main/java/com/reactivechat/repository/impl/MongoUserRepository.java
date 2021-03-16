@@ -1,10 +1,12 @@
 package com.reactivechat.repository.impl;
 
+import com.mongodb.client.model.Filters;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import com.reactivechat.exception.ChatException;
 import com.reactivechat.exception.ResponseStatus;
 import com.reactivechat.model.contacs.User;
+import com.reactivechat.model.message.ChatMessage.DestinationType;
 import com.reactivechat.repository.UserRepository;
 import org.bson.conversions.Bson;
 import org.slf4j.Logger;
@@ -26,9 +28,10 @@ public class MongoUserRepository implements UserRepository {
     private static final String USER_COLLECTION_NAME = "user";
     private static final String USER_ID = "_id";
     private static final String USERNAME = "username";
+    private static final String CONTACT_TYPE = "contactType";
     
     private static final Bson NON_SENSITIVE_FIELDS =
-        fields(include("id", "name", "avatar", "description", "contactType"));
+        fields(include("id", "name", "avatar", "description", CONTACT_TYPE));
 
     private final MongoCollection<User> mongoCollection;
     
@@ -79,6 +82,15 @@ public class MongoUserRepository implements UserRepository {
                     .find(ne(USER_ID, userId))
                     .projection(NON_SENSITIVE_FIELDS)
             );
+    }
+    
+    @Override
+    public Mono<DestinationType> findDestinationType(final String userId) {
+        return Mono.from(
+                mongoCollection.find(Filters.eq(USER_ID, userId))
+                    .projection(fields(include(CONTACT_TYPE)))
+            )
+            .map(group -> DestinationType.USER);
     }
     
     private Mono<User> usernameExists(final String username) {
