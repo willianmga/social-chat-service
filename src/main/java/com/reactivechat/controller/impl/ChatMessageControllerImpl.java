@@ -5,6 +5,8 @@ import com.reactivechat.controller.ChatMessageController;
 import com.reactivechat.model.contacs.Contact;
 import com.reactivechat.model.contacs.Group;
 import com.reactivechat.model.contacs.User;
+import com.reactivechat.model.message.ChatHistoryRequest;
+import com.reactivechat.model.message.ChatHistoryResponse;
 import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ResponseMessage;
@@ -23,6 +25,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import static com.reactivechat.model.message.MessageType.CHAT_HISTORY;
 import static com.reactivechat.model.message.MessageType.CONTACTS_LIST;
 import static com.reactivechat.model.message.MessageType.NEW_CONTACT_REGISTERED;
 
@@ -115,6 +118,31 @@ public class ChatMessageControllerImpl implements ChatMessageController {
             .build();
     
         broadcasterController.broadcastToAllExceptSession(chatSession, responseMessage);
+        
+    }
+    
+    @Override
+    public void handleChatHistory(final ChatSession chatSession,
+                                  final ChatHistoryRequest chatHistoryRequest) {
+        
+        final String senderId = chatSession.getUserAuthenticationDetails().getUserId();
+        
+        messageRepository.findMessages(senderId, chatHistoryRequest)
+            .collectList()
+            .subscribe(chatHistory -> {
+    
+                final ResponseMessage<Object> responseMessage = ResponseMessage
+                    .builder()
+                    .type(CHAT_HISTORY)
+                    .payload(ChatHistoryResponse.builder()
+                        .destinationId(chatHistoryRequest.getDestinationId())
+                        .chatHistory(chatHistory)
+                        .build())
+                    .build();
+    
+                broadcasterController.broadcastToSession(chatSession, responseMessage);
+    
+            });
         
     }
     

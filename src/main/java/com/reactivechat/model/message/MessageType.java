@@ -21,6 +21,7 @@ public enum MessageType {
     // Blacklisted messages. Require authentication to be received by server and sent to client
     
     CONTACTS_LIST,
+    CHAT_HISTORY,
     NEW_CONTACT_REGISTERED,
     USER_MESSAGE,
     LOGOFF;

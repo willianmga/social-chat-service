@@ -1,20 +1,28 @@
 package com.reactivechat.repository.impl;
 
+import com.mongodb.client.model.Filters;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
+import com.reactivechat.model.message.ChatHistoryRequest;
 import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.repository.MessageRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
 
 @Repository
 public class MongoMessageRepository implements MessageRepository {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoMessageRepository.class);
     private static final String CHAT_MESSAGE_COLLECTION = "chat_message";
+    private static final String SENDER_ID = "from";
+    private static final String DESTINATION_ID = "destinationId";
     
     private final MongoCollection<ChatMessage> mongoCollection;
     
@@ -29,6 +37,16 @@ public class MongoMessageRepository implements MessageRepository {
             .doOnSuccess(message -> LOGGER.info("Inserted message {}", message.getInsertedId()))
             .doOnError(error -> LOGGER.info("Error Inserting message. Reason {}", error.getMessage()))
             .subscribe();
+    }
+    
+    @Override
+    public Flux<ChatMessage> findMessages(final String senderId, final ChatHistoryRequest chatHistoryRequest) {
+        return Flux.from(
+            mongoCollection.find(and(
+                    eq(SENDER_ID, senderId),
+                    eq(DESTINATION_ID, chatHistoryRequest.getDestinationId()))
+                )
+            );
     }
     
 }

@@ -5,6 +5,7 @@ import com.reactivechat.controller.ChatMessageController;
 import com.reactivechat.controller.ServerMessageController;
 import com.reactivechat.controller.impl.ServerMessageControllerImpl;
 import com.reactivechat.model.message.AuthenticateRequest;
+import com.reactivechat.model.message.ChatHistoryRequest;
 import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.message.MessageType;
 import com.reactivechat.model.message.ReauthenticateRequest;
@@ -103,6 +104,10 @@ public class ChatEndpoint {
             case USER_MESSAGE:
                 chatMessageController
                     .handleChatMessage(chatSession, decodePayload(requestMessage.getPayload(), ChatMessage.class));
+                break;
+            case CHAT_HISTORY:
+                chatMessageController
+                    .handleChatHistory(chatSession, decodePayload(requestMessage.getPayload(), ChatHistoryRequest.class));
                 break;
             case CONTACTS_LIST:
                 chatMessageController
