@@ -3,7 +3,7 @@ package com.reactivechat.repository.impl;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import com.reactivechat.exception.ChatException;
-import com.reactivechat.model.User;
+import com.reactivechat.model.contacs.User;
 import com.reactivechat.model.session.ChatSession;
 import com.reactivechat.model.session.UserAuthenticationDetails;
 import com.reactivechat.repository.SessionRepository;

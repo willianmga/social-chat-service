@@ -1,4 +1,4 @@
-package com.reactivechat.model;
+package com.reactivechat.model.contacs;
 
 public interface Contact {
     

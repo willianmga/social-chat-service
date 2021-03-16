@@ -1,6 +1,6 @@
 package com.reactivechat.repository;
 
-import com.reactivechat.model.Group;
+import com.reactivechat.model.contacs.Group;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 

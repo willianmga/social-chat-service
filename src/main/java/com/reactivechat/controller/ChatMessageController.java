@@ -1,6 +1,6 @@
 package com.reactivechat.controller;
 
-import com.reactivechat.model.Contact;
+import com.reactivechat.model.contacs.Contact;
 import com.reactivechat.model.message.ChatMessage;
 import com.reactivechat.model.session.ChatSession;
 

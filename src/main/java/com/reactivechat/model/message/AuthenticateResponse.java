@@ -1,7 +1,7 @@
 package com.reactivechat.model.message;
 
 import com.reactivechat.exception.ResponseStatus;
-import com.reactivechat.model.UserDTO;
+import com.reactivechat.model.contacs.UserDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;

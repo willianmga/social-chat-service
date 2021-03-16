@@ -2,7 +2,7 @@ package com.reactivechat.repository.impl;
 
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
-import com.reactivechat.model.Group;
+import com.reactivechat.model.contacs.Group;
 import com.reactivechat.repository.GroupRepository;
 import java.util.UUID;
 import org.bson.conversions.Bson;

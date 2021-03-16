@@ -1,4 +1,4 @@
-package com.reactivechat.websocket;
+package com.reactivechat.websocket.decoder;
 
 import com.google.gson.Gson;
 import com.reactivechat.model.message.RequestMessage;

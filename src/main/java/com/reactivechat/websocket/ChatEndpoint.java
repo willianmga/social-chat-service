@@ -12,6 +12,10 @@ import com.reactivechat.model.message.RequestMessage;
 import com.reactivechat.model.message.SignupRequest;
 import com.reactivechat.model.session.ChatSession;
 import com.reactivechat.repository.SessionRepository;
+import com.reactivechat.websocket.decoder.RequestMessageDecoder;
+import com.reactivechat.websocket.decoder.ResponseMessageDecoder;
+import com.reactivechat.websocket.encoder.RequestMessageEncoder;
+import com.reactivechat.websocket.encoder.ResponseMessageEncoder;
 import java.util.Optional;
 import java.util.UUID;
 import javax.websocket.OnClose;
@@ -24,7 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import static com.reactivechat.websocket.PayloadEncoder.decodePayload;
+import static com.reactivechat.websocket.encoder.PayloadEncoder.decodePayload;
 
 @ServerEndpoint(
     value = "/chat",

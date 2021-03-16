@@ -1,4 +1,4 @@
-package com.reactivechat.model;
+package com.reactivechat.model.contacs;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
