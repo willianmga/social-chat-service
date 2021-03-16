@@ -86,7 +86,7 @@ public class MongoSessionRepository implements SessionRepository {
     public Mono<String> reauthenticate(final ChatSession chatSession,
                                        final String token) {
     
-        final ChatSession existingSession = tokenInUse(token)
+        final ChatSession existingSession = findByActiveToken(token)
             .blockOptional()
             .orElseThrow(() -> new ChatException("Token isn't assigned to any session", INVALID_CREDENTIALS));
     

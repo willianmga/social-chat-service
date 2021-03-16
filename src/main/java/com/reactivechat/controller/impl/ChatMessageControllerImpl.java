@@ -77,17 +77,20 @@ public class ChatMessageControllerImpl implements ChatMessageController {
         final String userId = chatSession.getUserAuthenticationDetails().getUserId();
         final Flux<User> userContacts = userRepository.findContacts(userId);
         final Flux<Group> groupContacts = groupRepository.findGroups(userId);
-        final List<Contact> allContacts = Flux.concat(userContacts, groupContacts)
-            .toStream()
-            .collect(Collectors.toList());
+        
+        Flux.concat(userContacts, groupContacts)
+            .collectList()
+            .subscribe(contacts -> {
 
-        ResponseMessage<Object> responseMessage = ResponseMessage
-            .builder()
-            .type(CONTACTS_LIST)
-            .payload(allContacts)
-            .build();
-
-        broadcasterController.broadcastToSession(chatSession, responseMessage);
+                ResponseMessage<Object> responseMessage = ResponseMessage
+                    .builder()
+                    .type(CONTACTS_LIST)
+                    .payload(contacts)
+                    .build();
+    
+                broadcasterController.broadcastToSession(chatSession, responseMessage);
+                
+            });
 
     }
     
