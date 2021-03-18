@@ -7,13 +7,13 @@ import reactor.core.publisher.Mono;
 
 public interface SessionRepository {
     
-    void authenticate(final ChatSession chatSession, final User user, final String token);
-    Mono<String> reauthenticate(final ChatSession chatSession, final String token);
-    Mono<Boolean> deleteConnection(final String connectionId);
+    void authenticate(ChatSession chatSession, User user, String token);
+    Mono<String> reauthenticate(ChatSession chatSession, String token);
+    Mono<Boolean> deleteConnection(String connectionId);
     void logoff(ChatSession chatSession);
-    Flux<ChatSession> findByUser(final String userId);
+    Flux<ChatSession> findByUser(String userId);
     Flux<ChatSession> findAllConnections();
-    Mono<ChatSession> findByActiveToken(final String token);
+    Mono<ChatSession> findByActiveToken(String token);
     Mono<ChatSession> tokenInUse(String token);
     
 }

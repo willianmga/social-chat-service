@@ -7,9 +7,9 @@ import com.reactivechat.model.session.ChatSession;
 
 public interface BroadcasterController {
     
-    void broadcastChatMessage(final ChatSession chatSession, final ResponseMessage<ChatMessage> message);
-    void broadcastToAllExceptSession(final ChatSession chatSession, final Message message);
-    void broadcastToUser(final String userId, final Message message);
-    void broadcastToSession(final ChatSession chatSession, final Message message);
+    void broadcastChatMessage(ChatSession chatSession, ResponseMessage<ChatMessage> message);
+    void broadcastToAllExceptSession(ChatSession chatSession, Message message);
+    void broadcastToUser(String userId, Message message);
+    void broadcastToSession(ChatSession chatSession, Message message);
     
 }

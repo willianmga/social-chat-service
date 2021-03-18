@@ -189,8 +189,7 @@ public class MongoSessionRepository implements SessionRepository {
             );
     }
     
-    private ChatSession buildChatSession(final ChatSession session,
-                                         final Session webSocketSession) {
+    private ChatSession buildChatSession(final ChatSession session, final Session webSocketSession) {
         
         return session.from()
             .webSocketSession(webSocketSession)

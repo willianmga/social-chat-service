@@ -59,7 +59,7 @@ public class BroadcasterControllerImpl implements BroadcasterController {
                                             final Message message) {
         
         final Flux<ChatSession> sessions = sessionRepository.findAllConnections()
-            .filter(existingSession -> !existingSession.getConnectionId().equals(chatSession.getConnectionId()));
+            .filter(session -> !session.getConnectionId().equals(chatSession.getConnectionId()));
     
         broadcast(sessions, message);
         
