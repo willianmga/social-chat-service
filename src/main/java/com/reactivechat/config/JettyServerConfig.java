@@ -1,11 +1,11 @@
 package com.reactivechat.config;
 
-import com.reactivechat.controller.AuthenticationController;
-import com.reactivechat.controller.ChatMessageController;
-import com.reactivechat.controller.impl.ServerMessageControllerImpl;
-import com.reactivechat.model.session.ServerDetails;
-import com.reactivechat.server.JettyEmbeddedWebSocketServer;
-import com.reactivechat.server.ServerEndpointConfigurator;
+import com.reactivechat.session.AuthenticationController;
+import com.reactivechat.message.ChatMessageController;
+import com.reactivechat.server.ServerMessageControllerImpl;
+import com.reactivechat.session.session.ServerDetails;
+import com.reactivechat.jetty.JettyEmbeddedWebSocketServer;
+import com.reactivechat.jetty.ServerEndpointConfigurator;
 import com.reactivechat.websocket.ChatEndpoint;
 import java.util.HashMap;
 import java.util.Map;

@@ -1,6 +1,6 @@
 package com.reactivechat.exception;
 
-import com.reactivechat.model.message.ErrorMessage;
+import com.reactivechat.message.message.ErrorMessage;
 import lombok.Getter;
 
 import static com.reactivechat.exception.ResponseStatus.SERVER_ERROR;

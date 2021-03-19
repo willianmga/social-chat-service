@@ -1,7 +1,7 @@
 package com.reactivechat.websocket.encoder;
 
 import com.google.gson.Gson;
-import com.reactivechat.model.message.ResponseMessage;
+import com.reactivechat.message.message.ResponseMessage;
 import javax.websocket.Encoder;
 import javax.websocket.EndpointConfig;
 
