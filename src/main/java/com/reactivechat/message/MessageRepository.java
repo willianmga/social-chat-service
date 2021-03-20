@@ -7,7 +7,7 @@ import reactor.core.publisher.Flux;
 
 public interface MessageRepository {
     
-    void insert(final ChatMessage chatMessage);
-    Flux<ChatMessage> findMessages(final String senderId, final DestinationType destinationType, final ChatHistoryRequest chatHistoryRequest);
+    void insert(ChatMessage chatMessage);
+    Flux<ChatMessage> findMessages(String senderId, DestinationType destinationType, ChatHistoryRequest chatHistoryRequest);
     
 }

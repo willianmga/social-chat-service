@@ -13,4 +13,5 @@ public class ChatHistoryRequest {
     
     private final String destinationId;
     
+    
 }

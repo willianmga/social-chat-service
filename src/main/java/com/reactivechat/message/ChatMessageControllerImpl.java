@@ -2,20 +2,20 @@ package com.reactivechat.message;
 
 import com.reactivechat.broadcast.BroadcasterController;
 import com.reactivechat.contact.Contact;
+import com.reactivechat.group.GroupRepository;
 import com.reactivechat.group.model.Group;
-import com.reactivechat.user.model.User;
 import com.reactivechat.message.message.ChatHistoryRequest;
 import com.reactivechat.message.message.ChatHistoryResponse;
 import com.reactivechat.message.message.ChatMessage;
 import com.reactivechat.message.message.MessageType;
 import com.reactivechat.message.message.ResponseMessage;
 import com.reactivechat.session.session.ChatSession;
-import com.reactivechat.group.GroupRepository;
 import com.reactivechat.user.UserRepository;
+import com.reactivechat.user.model.User;
 import java.time.OffsetDateTime;
 import java.util.Collections;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -63,7 +63,7 @@ public class ChatMessageControllerImpl implements ChatMessageController {
                 final String userId = chatSession.getUserAuthenticationDetails().getUserId();
     
                 final ChatMessage chatMessage = ChatMessage.builder()
-                    .id(UUID.randomUUID().toString())
+                    .objectId(new ObjectId())
                     .from(userId)
                     .date(OffsetDateTime.now().toString())
                     .destinationId(receivedMessage.getDestinationId())

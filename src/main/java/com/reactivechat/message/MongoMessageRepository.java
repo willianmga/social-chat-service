@@ -23,7 +23,7 @@ import static com.mongodb.client.model.Filters.or;
 public class MongoMessageRepository implements MessageRepository {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(MongoMessageRepository.class);
-    private static final String CHAT_MESSAGE_COLLECTION = "chat_message";
+    private static final String CHAT_MESSAGE_COLLECTION = "chat_message_object_id";
     private static final String SENDER_ID = "from";
     private static final String DESTINATION_ID = "destinationId";
     
