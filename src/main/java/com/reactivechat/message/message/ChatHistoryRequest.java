@@ -12,6 +12,6 @@ import lombok.ToString;
 public class ChatHistoryRequest {
     
     private final String destinationId;
-    
+    private final String lastMessageId;
     
 }
