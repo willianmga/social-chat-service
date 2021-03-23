@@ -1,9 +1,6 @@
 package com.reactivechat.websocket;
 
-import com.reactivechat.session.AuthenticationController;
 import com.reactivechat.message.ChatMessageController;
-import com.reactivechat.server.ServerMessageController;
-import com.reactivechat.server.ServerMessageControllerImpl;
 import com.reactivechat.message.message.AuthenticateRequest;
 import com.reactivechat.message.message.ChatHistoryRequest;
 import com.reactivechat.message.message.ChatMessage;
@@ -11,6 +8,9 @@ import com.reactivechat.message.message.MessageType;
 import com.reactivechat.message.message.ReauthenticateRequest;
 import com.reactivechat.message.message.RequestMessage;
 import com.reactivechat.message.message.SignupRequest;
+import com.reactivechat.server.ServerMessageController;
+import com.reactivechat.server.ServerMessageControllerImpl;
+import com.reactivechat.session.AuthenticationController;
 import com.reactivechat.session.session.ChatSession;
 import com.reactivechat.websocket.decoder.RequestMessageDecoder;
 import com.reactivechat.websocket.decoder.ResponseMessageDecoder;
@@ -26,6 +26,7 @@ import javax.websocket.server.ServerEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import static com.reactivechat.websocket.encoder.PayloadEncoder.decodePayload;
 
@@ -34,6 +35,7 @@ import static com.reactivechat.websocket.encoder.PayloadEncoder.decodePayload;
     decoders = {RequestMessageDecoder.class, ResponseMessageDecoder.class},
     encoders = {RequestMessageEncoder.class, ResponseMessageEncoder.class}
 )
+@Component
 public class ChatEndpoint {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatEndpoint.class);
@@ -94,6 +96,7 @@ public class ChatEndpoint {
     @OnError
     public void onError(final Session session, final Throwable throwable) {
         LOGGER.error("Error occurred during connection {}. Reason {}", session.getId(), throwable.getMessage());
+        throwable.printStackTrace();
     }
     
     private void handleBlackListedMessages(final ChatSession chatSession,
