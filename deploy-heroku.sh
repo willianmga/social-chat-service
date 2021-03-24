@@ -15,7 +15,7 @@ export RELEASE_VERSION=${CURRENT_VERSION%$SNAPSHOT}
 
 # Package the jar
 
-mvn clean package
+mvn clean package || { echo 'Failed to build project. Exiting.' ; exit 1; }
 
 # Build, tag and push docker image
 
@@ -46,4 +46,4 @@ heroku container:release web --app $APPNAME || { echo 'Failed to deploy to herok
 
 # Tag the release
 
-sh tag-release.sh ${NEW_VERSION}
+#sh tag-release.sh ${NEW_VERSION}

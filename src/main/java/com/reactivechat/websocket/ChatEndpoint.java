@@ -1,22 +1,18 @@
 package com.reactivechat.websocket;
 
 import com.reactivechat.message.ChatMessageController;
-import com.reactivechat.message.message.AuthenticateRequest;
 import com.reactivechat.message.message.ChatHistoryRequest;
 import com.reactivechat.message.message.ChatMessage;
 import com.reactivechat.message.message.MessageType;
-import com.reactivechat.message.message.ReauthenticateRequest;
 import com.reactivechat.message.message.RequestMessage;
-import com.reactivechat.message.message.SignupRequest;
 import com.reactivechat.server.ServerMessageController;
 import com.reactivechat.server.ServerMessageControllerImpl;
-import com.reactivechat.session.AuthenticationController;
 import com.reactivechat.session.session.ChatSession;
+import com.reactivechat.websocket.AccessTokenFilter.LoggedInUser;
 import com.reactivechat.websocket.decoder.RequestMessageDecoder;
 import com.reactivechat.websocket.decoder.ResponseMessageDecoder;
 import com.reactivechat.websocket.encoder.RequestMessageEncoder;
 import com.reactivechat.websocket.encoder.ResponseMessageEncoder;
-import java.util.Optional;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
@@ -28,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import static com.reactivechat.session.session.ChatSession.Status.AUTHENTICATED;
 import static com.reactivechat.websocket.encoder.PayloadEncoder.decodePayload;
 
 @ServerEndpoint(
@@ -40,16 +37,12 @@ public class ChatEndpoint {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatEndpoint.class);
     
-    private final AuthenticationController authenticationController;
     private final ChatMessageController chatMessageController;
     private final ServerMessageController serverMessageController;
     
     @Autowired
-    public ChatEndpoint(final AuthenticationController authenticationController,
-                        final ChatMessageController chatMessageController,
+    public ChatEndpoint(final ChatMessageController chatMessageController,
                         final ServerMessageControllerImpl clientServerMessageController) {
-        
-        this.authenticationController = authenticationController;
         this.chatMessageController = chatMessageController;
         this.serverMessageController = clientServerMessageController;
     }
@@ -67,27 +60,10 @@ public class ChatEndpoint {
             return;
         }
     
-        final MessageType messageType = requestMessage.getType();
-    
-        if (!messageType.isWhitelisted() && authenticatedRequestMessage(requestMessage)) {
-        
-            final Optional<ChatSession> chatSessionOpt = authenticationController
-                .restoreSessionByToken(ChatSession.fromSession(session), requestMessage.getToken());
-    
-            if (chatSessionOpt.isPresent() && chatSessionOpt.get().isAuthenticated()) {
-                handleBlackListedMessages(chatSessionOpt.get(), requestMessage, messageType);
-            } else {
-                serverMessageController.handleNotAuthenticated(ChatSession.fromSession(session));
-            }
-    
-        } else if (messageType.isWhitelisted()) {
-            handleWhiteListedMessages(ChatSession.fromSession(session), requestMessage, messageType);
-        } else {
-            serverMessageController.handleInvalidRequest(ChatSession.fromSession(session));
-        }
+        handleMessages(restoreSession(session), requestMessage, requestMessage.getType());
     
     }
-    
+
     @OnClose
     public void onClose(final Session session) {
         serverMessageController.handleDisconnected(ChatSession.fromSession(session));
@@ -99,11 +75,14 @@ public class ChatEndpoint {
         throwable.printStackTrace();
     }
     
-    private void handleBlackListedMessages(final ChatSession chatSession,
-                                           final RequestMessage<?> requestMessage,
-                                           final MessageType messageType) {
+    private void handleMessages(final ChatSession chatSession,
+                                final RequestMessage<?> requestMessage,
+                                final MessageType messageType) {
 
         switch (messageType) {
+            case PING:
+                serverMessageController.handlePing(chatSession);
+                break;
             case USER_MESSAGE:
                 chatMessageController
                     .handleChatMessage(chatSession, decodePayload(requestMessage.getPayload(), ChatMessage.class));
@@ -122,40 +101,21 @@ public class ChatEndpoint {
         
     }
     
-    private void handleWhiteListedMessages(final ChatSession chatSession,
-                                           final RequestMessage<?> requestMessage,
-                                           final MessageType messageType) {
-    
-        switch (messageType) {
-            case AUTHENTICATE:
-                authenticationController
-                    .handleAuthenticate(decodePayload(requestMessage.getPayload(), AuthenticateRequest.class), chatSession);
-                break;
-            case REAUTHENTICATE:
-                authenticationController
-                    .handleReauthenticate(decodePayload(requestMessage.getPayload(), ReauthenticateRequest.class), chatSession);
-                break;
-            case SIGNUP:
-                authenticationController
-                    .handleSignup(decodePayload(requestMessage.getPayload(), SignupRequest.class), chatSession);
-                break;
-            case PING:
-                serverMessageController.handlePing(chatSession);
-                break;
-            case LOGOFF:
-                authenticationController.logoff(chatSession);
-                break;
-            default: LOGGER.error("Unable to handle message of type {}", messageType.name());
-        }
-
+    public ChatSession restoreSession(final Session session) {
+        
+        final LoggedInUser userPrincipal = (LoggedInUser) session.getUserPrincipal();
+        
+        return ChatSession.builder()
+            .id(userPrincipal.getSessionId())
+            .userAuthenticationDetails(userPrincipal.getUserAuthenticationDetails())
+            .webSocketSession(session)
+            .connectionId(session.getId())
+            .status(AUTHENTICATED)
+            .build();
     }
-
-    private boolean validRequestMessage(RequestMessage<?> requestMessage) {
+    
+    private boolean validRequestMessage(final RequestMessage<?> requestMessage) {
         return requestMessage != null  && requestMessage.getType() != null;
-    }
-    
-    private boolean authenticatedRequestMessage(RequestMessage<?> requestMessage) {
-        return requestMessage.getToken() != null && !requestMessage.getToken().trim().isEmpty();
     }
 
 }

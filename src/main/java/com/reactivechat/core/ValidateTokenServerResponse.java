@@ -1,7 +1,6 @@
-package com.reactivechat.message.message;
+package com.reactivechat.core;
 
 import com.reactivechat.exception.ResponseStatus;
-import com.reactivechat.user.model.UserDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -13,10 +12,11 @@ import lombok.ToString;
 @ToString
 @EqualsAndHashCode
 @AllArgsConstructor
-public class AuthenticateResponse {
+public class ValidateTokenServerResponse {
     
-    private final String token;
-    private final UserDTO user;
+    private final String userId;
+    private final String sessionId;
+    private final String message;
     private final ResponseStatus status;
     
 }
