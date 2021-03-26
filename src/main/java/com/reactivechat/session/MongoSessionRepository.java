@@ -62,8 +62,8 @@ public class MongoSessionRepository implements SessionRepository {
                     .find(and(eq(USER_ID, userId), eq(SESSION_STATUS, AUTHENTICATED_STATUS)))
                     .projection(SERVER_REQUIRED_FIELDS)
             )
-            .filter(session -> chatSessionsMap.containsKey(session.getId()))
-            .flatMap(session -> Mono.just(chatSessionsMap.get(session.getId())));
+            .filter(session -> chatSessionsMap.containsKey(buildConnectionId(session)))
+            .flatMap(session -> Mono.just(chatSessionsMap.get(buildConnectionId(session))));
     }
 
     @Override
