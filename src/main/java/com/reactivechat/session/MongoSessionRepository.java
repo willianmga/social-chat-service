@@ -5,7 +5,6 @@ import com.mongodb.reactivestreams.client.MongoDatabase;
 import com.reactivechat.session.session.ChatSession;
 import java.util.HashMap;
 import java.util.Map;
-import javax.websocket.Session;
 import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -16,7 +15,6 @@ import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Projections.fields;
 import static com.mongodb.client.model.Projections.include;
-import static com.reactivechat.session.session.ChatSession.Status.AUTHENTICATED;
 
 @Repository
 public class MongoSessionRepository implements SessionRepository {
@@ -28,46 +26,55 @@ public class MongoSessionRepository implements SessionRepository {
     private static final String USER_ID = USER_AUTHENTICATION_DETAILS + ".userId";
     private static final String SESSION_STATUS = "status";
     private static final String SESSION_TYPE = "type";
-    
+    private static final String AUTHENTICATED_STATUS = "AUTHENTICATED";
     private static final Bson SERVER_REQUIRED_FIELDS =
         fields(include("id", CONNECTION_ID, SERVER_DETAILS, USER_AUTHENTICATION_DETAILS, SESSION_STATUS, SESSION_TYPE));
     
-    private final Map<String, Session> connectionsMap;
     private final MongoCollection<ChatSession> mongoCollection;
+    private final Map<String, ChatSession> chatSessionsMap;
     
     @Autowired
     public MongoSessionRepository(final MongoDatabase mongoDatabase) {
         this.mongoCollection = mongoDatabase.getCollection(SESSIONS_COLLECTION, ChatSession.class);
-        this.connectionsMap = new HashMap<>();
+        this.chatSessionsMap = new HashMap<>();
     }
-
+    
+    @Override
+    public Mono<Boolean> createSession(final ChatSession chatSession) {
+        return Mono.just(
+            chatSessionsMap
+                .put(buildConnectionId(chatSession), chatSession) != null
+        );
+    }
+    
+    @Override
+    public Mono<Boolean> deleteSession(final ChatSession chatSession) {
+        return Mono.just(
+            chatSessionsMap
+                .remove(buildConnectionId(chatSession)) != null
+        );
+    }
+    
     @Override
     public Flux<ChatSession> findByUser(final String userId) {
         return Flux.from(
                 mongoCollection
-                    .find(and(eq(USER_ID, userId), eq(SESSION_STATUS, AUTHENTICATED.name())))
+                    .find(and(eq(USER_ID, userId), eq(SESSION_STATUS, AUTHENTICATED_STATUS)))
                     .projection(SERVER_REQUIRED_FIELDS)
             )
-            .filter(session -> connectionsMap.containsKey(session.getConnectionId()))
-            .map(session -> buildChatSession(session, connectionsMap.get(session.getConnectionId())));
+            .filter(session -> chatSessionsMap.containsKey(session.getId()))
+            .flatMap(session -> Mono.just(chatSessionsMap.get(session.getId())));
     }
 
     @Override
     public Flux<ChatSession> findAllConnections() {
-        return Flux.fromIterable(connectionsMap.values())
-            .map(ChatSession::fromSession);
+        return Flux.fromIterable(chatSessionsMap.values());
     }
     
-    @Override
-    public Mono<Boolean> deleteConnection(final String connectionId) {
-        return Mono.just(connectionsMap.remove(connectionId) != null);
+    private String buildConnectionId(final ChatSession chatSession) {
+        return chatSession.getUserAuthenticationDetails().getUserId() + "-" +
+            chatSession.getId() + "-" +
+            chatSession.getConnectionId();
     }
-    
-    private ChatSession buildChatSession(final ChatSession session, final Session webSocketSession) {
-        
-        return session.from()
-            .webSocketSession(webSocketSession)
-            .build();
-    }
-    
+
 }

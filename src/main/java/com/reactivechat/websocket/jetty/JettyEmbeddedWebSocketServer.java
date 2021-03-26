@@ -1,6 +1,6 @@
-package com.reactivechat.jetty;
+package com.reactivechat.websocket.jetty;
 
-import com.reactivechat.websocket.AccessTokenFilter;
+import com.reactivechat.websocket.filter.AccessTokenFilter;
 import com.reactivechat.websocket.ChatEndpoint;
 import java.util.EnumSet;
 import javax.servlet.DispatcherType;

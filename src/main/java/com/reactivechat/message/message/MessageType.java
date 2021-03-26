@@ -5,7 +5,6 @@ public enum MessageType {
     PONG,
     CONNECTED,
     DISCONNECTED,
-    NOT_AUTHENTICATED,
     INVALID_REQUEST,
     CONTACTS_LIST,
     CHAT_HISTORY,

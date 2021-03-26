@@ -68,14 +68,9 @@ public class BroadcasterControllerImpl implements BroadcasterController {
     
     @Override
     public void broadcastToUser(final String userId, final Message chatMessage) {
-        
         // TODO: find a mapping between server session and stored session in order to find user
         // TODO: current behavior lists all reauthentications of the user
-        
-        final Flux<ChatSession> sessions = sessionRepository
-            .findByUser(userId);
-    
-        broadcast(sessions, chatMessage);
+        broadcast(sessionRepository.findByUser(userId), chatMessage);
     }
     
     @Override
@@ -87,16 +82,21 @@ public class BroadcasterControllerImpl implements BroadcasterController {
     
         sessions
             .publishOn(Schedulers.fromExecutorService(executorService))
-            .subscribe(session -> {
+            .subscribe(chatSession -> {
                 try {
-                    if (session.isOpen()) {
-                        session.getWebSocketSession().getBasicRemote().sendObject(message);
+                    if (chatSession.isOpen()) {
+                        
+                        chatSession
+                            .getWebSocketSession()
+                            .getBasicRemote()
+                            .sendObject(message);
+                        
                     } else {
-                        sessionRepository.deleteConnection(session.getConnectionId());
-                        LOGGER.error("Can't send message to session {} because session is not opened", session.getId());
+                        sessionRepository.deleteSession(chatSession);
+                        LOGGER.error("Can't send message to session {} because session is not opened", chatSession.getId());
                     }
                 } catch (Exception e) {
-                    LOGGER.error("Error occurred while sending message to session {}. Reason: {}", session.getId(), e.getMessage());
+                    LOGGER.error("Error occurred while sending message to session {}. Reason: {}", chatSession.getId(), e.getMessage());
                 }
             });
      

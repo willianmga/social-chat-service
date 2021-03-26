@@ -43,12 +43,10 @@ public class MongoGroupRepository implements GroupRepository {
             .avatar(group.getAvatar())
             .build();
     
-        Mono.from(mongoCollection.insertOne(newGroup))
+        return Mono.from(mongoCollection.insertOne(newGroup))
             .doOnSuccess(result -> LOGGER.info("Created group {}", result.getInsertedId()))
             .doOnError(error -> LOGGER.error("Failed to insert group. Reason: {}", error.getMessage()))
-            .subscribe();
-        
-        return Mono.just(newGroup);
+            .flatMap(result -> Mono.just(newGroup));
     }
     
     @Override
@@ -65,7 +63,7 @@ public class MongoGroupRepository implements GroupRepository {
                 mongoCollection.find(Filters.eq(GROUP_ID, groupId))
                     .projection(fields(include(CONTACT_TYPE)))
             )
-            .map(group -> DestinationType.GROUP);
+            .flatMap(group -> Mono.just(DestinationType.GROUP));
     }
     
 }
