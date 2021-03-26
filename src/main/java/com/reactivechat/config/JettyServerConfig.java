@@ -1,7 +1,7 @@
 package com.reactivechat.config;
 
 import com.reactivechat.session.session.ServerDetails;
-import com.reactivechat.websocket.ChatEndpoint;
+import com.reactivechat.websocket.ChatEndpointController;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -19,9 +19,9 @@ public class JettyServerConfig {
     }
 
     @Bean("webSocketEndpointsMap")
-    public Map<Class<?>, Object> webSocketEndpointsMap(final ChatEndpoint chatEndpoint) {
+    public Map<Class<?>, Object> webSocketEndpointsMap(final ChatEndpointController chatEndpointController) {
         return new HashMap<Class<?>, Object>() {{
-            put(chatEndpoint.getClass(), chatEndpoint);
+            put(chatEndpointController.getClass(), chatEndpointController);
         }};
     }
 

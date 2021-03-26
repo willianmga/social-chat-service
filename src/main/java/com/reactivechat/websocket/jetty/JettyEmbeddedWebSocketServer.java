@@ -1,7 +1,7 @@
 package com.reactivechat.websocket.jetty;
 
 import com.reactivechat.websocket.filter.AccessTokenFilter;
-import com.reactivechat.websocket.ChatEndpoint;
+import com.reactivechat.websocket.ChatEndpointController;
 import java.util.EnumSet;
 import javax.servlet.DispatcherType;
 import javax.websocket.server.ServerEndpointConfig;
@@ -67,7 +67,7 @@ public class JettyEmbeddedWebSocketServer {
                     wsContainer.setDefaultMaxTextMessageBufferSize(65535);
                     
                     ServerEndpointConfig serverEndpointConfig = Builder
-                        .create(ChatEndpoint.class, "/chat")
+                        .create(ChatEndpointController.class, "/chat")
                         .configurator(serverEndpointConfigurator)
                         .build();
                     

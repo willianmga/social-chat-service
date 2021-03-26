@@ -5,7 +5,7 @@ import com.reactivechat.message.message.Message;
 import com.reactivechat.message.message.ResponseMessage;
 import com.reactivechat.session.session.ChatSession;
 
-public interface BroadcasterController {
+public interface BroadcasterService {
     
     void broadcastChatMessage(ChatSession chatSession, ResponseMessage<ChatMessage> message);
     void broadcastToAllExceptSession(ChatSession chatSession, Message message);

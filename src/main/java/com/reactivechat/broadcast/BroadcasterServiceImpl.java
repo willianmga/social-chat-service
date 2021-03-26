@@ -4,27 +4,27 @@ import com.reactivechat.message.message.ChatMessage;
 import com.reactivechat.message.message.ChatMessage.DestinationType;
 import com.reactivechat.message.message.Message;
 import com.reactivechat.message.message.ResponseMessage;
-import com.reactivechat.session.session.ChatSession;
 import com.reactivechat.session.SessionRepository;
+import com.reactivechat.session.session.ChatSession;
 import java.util.concurrent.ExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
-@Controller
-public class BroadcasterControllerImpl implements BroadcasterController {
+@Service
+public class BroadcasterServiceImpl implements BroadcasterService {
     
-    private static final Logger LOGGER = LoggerFactory.getLogger(BroadcasterControllerImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BroadcasterServiceImpl.class);
     
     private final ExecutorService executorService;
     private final SessionRepository sessionRepository;
     
     @Autowired
-    public BroadcasterControllerImpl(final ExecutorService executorService,
-                                     final SessionRepository sessionRepository) {
+    public BroadcasterServiceImpl(final ExecutorService executorService,
+                                  final SessionRepository sessionRepository) {
         
         this.executorService = executorService;
         this.sessionRepository = sessionRepository;

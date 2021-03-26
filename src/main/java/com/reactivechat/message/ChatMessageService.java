@@ -5,7 +5,7 @@ import com.reactivechat.message.message.ChatHistoryRequest;
 import com.reactivechat.message.message.ChatMessage;
 import com.reactivechat.session.session.ChatSession;
 
-public interface ChatMessageController {
+public interface ChatMessageService {
 
     void handleChatMessage(ChatSession chatSession, ChatMessage chatMessage);
     void handleContactsMessage(ChatSession chatSession);

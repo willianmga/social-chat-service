@@ -1,6 +1,6 @@
 package com.reactivechat.server;
 
-import com.reactivechat.broadcast.BroadcasterController;
+import com.reactivechat.broadcast.BroadcasterService;
 import com.reactivechat.message.message.MessageType;
 import com.reactivechat.message.message.ResponseMessage;
 import com.reactivechat.session.SessionRepository;
@@ -11,18 +11,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ServerMessageControllerImpl implements ServerMessageController {
+public class ServerMessageServiceImpl implements ServerMessageService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ServerMessageControllerImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ServerMessageServiceImpl.class);
     
-    private final BroadcasterController broadcasterController;
+    private final BroadcasterService broadcasterService;
     private final SessionRepository sessionRepository;
     
     @Autowired
-    public ServerMessageControllerImpl(final BroadcasterController broadcasterController,
-                                       final SessionRepository sessionRepository) {
+    public ServerMessageServiceImpl(final BroadcasterService broadcasterService,
+                                    final SessionRepository sessionRepository) {
         
-        this.broadcasterController = broadcasterController;
+        this.broadcasterService = broadcasterService;
         this.sessionRepository = sessionRepository;
     }
 
@@ -67,7 +67,7 @@ public class ServerMessageControllerImpl implements ServerMessageController {
             .type(messageType)
             .build();
         
-        broadcasterController.broadcastToSession(chatSession, responseMessage);
+        broadcasterService.broadcastToSession(chatSession, responseMessage);
         
     }
     

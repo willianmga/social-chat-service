@@ -1,12 +1,12 @@
 package com.reactivechat.websocket;
 
-import com.reactivechat.message.ChatMessageController;
+import com.reactivechat.message.ChatMessageService;
 import com.reactivechat.message.message.ChatHistoryRequest;
 import com.reactivechat.message.message.ChatMessage;
 import com.reactivechat.message.message.MessageType;
 import com.reactivechat.message.message.RequestMessage;
-import com.reactivechat.server.ServerMessageController;
-import com.reactivechat.server.ServerMessageControllerImpl;
+import com.reactivechat.server.ServerMessageService;
+import com.reactivechat.server.ServerMessageServiceImpl;
 import com.reactivechat.session.session.ChatSession;
 import com.reactivechat.websocket.decoder.RequestMessageDecoder;
 import com.reactivechat.websocket.decoder.ResponseMessageDecoder;
@@ -32,23 +32,23 @@ import static com.reactivechat.websocket.encoder.PayloadEncoder.decodePayload;
     decoders = {RequestMessageDecoder.class, ResponseMessageDecoder.class},
     encoders = {RequestMessageEncoder.class, ResponseMessageEncoder.class}
 )
-public class ChatEndpoint {
+public class ChatEndpointController {
     
-    private static final Logger LOGGER = LoggerFactory.getLogger(ChatEndpoint.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChatEndpointController.class);
     
-    private final ChatMessageController chatMessageController;
-    private final ServerMessageController serverMessageController;
+    private final ChatMessageService chatMessageService;
+    private final ServerMessageService serverMessageService;
     
     @Autowired
-    public ChatEndpoint(final ChatMessageController chatMessageController,
-                        final ServerMessageControllerImpl clientServerMessageController) {
-        this.chatMessageController = chatMessageController;
-        this.serverMessageController = clientServerMessageController;
+    public ChatEndpointController(final ChatMessageService chatMessageService,
+                                  final ServerMessageServiceImpl clientServerMessageController) {
+        this.chatMessageService = chatMessageService;
+        this.serverMessageService = clientServerMessageController;
     }
     
     @OnOpen
     public void onOpen(final Session session) {
-        serverMessageController.handleConnected(buildChatSession(session));
+        serverMessageService.handleConnected(buildChatSession(session));
     }
 
     @OnMessage
@@ -56,13 +56,13 @@ public class ChatEndpoint {
         if (validRequestMessage(requestMessage)) {
             handleMessages(buildChatSession(session), requestMessage, requestMessage.getType());
         } else {
-            serverMessageController.handleInvalidRequest(buildChatSession(session));
+            serverMessageService.handleInvalidRequest(buildChatSession(session));
         }
     }
 
     @OnClose
     public void onClose(final Session session) {
-        serverMessageController.handleDisconnected(buildChatSession(session));
+        serverMessageService.handleDisconnected(buildChatSession(session));
     }
     
     @OnError
@@ -76,19 +76,19 @@ public class ChatEndpoint {
 
         switch (messageType) {
             case USER_MESSAGE:
-                chatMessageController
+                chatMessageService
                     .handleChatMessage(chatSession, decodePayload(requestMessage.getPayload(), ChatMessage.class));
                 break;
             case CHAT_HISTORY:
-                chatMessageController
+                chatMessageService
                     .handleChatHistory(chatSession, decodePayload(requestMessage.getPayload(), ChatHistoryRequest.class));
                 break;
             case CONTACTS_LIST:
-                chatMessageController
+                chatMessageService
                     .handleContactsMessage(chatSession);
                 break;
             case PING:
-                serverMessageController.handlePing(chatSession);
+                serverMessageService.handlePing(chatSession);
                 break;
             default:
                 LOGGER.error("Unable to handle message of type {}", messageType.name());
