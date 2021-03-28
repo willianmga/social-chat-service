@@ -1,6 +1,6 @@
 package com.reactivechat.message;
 
-import com.reactivechat.broadcast.BroadcasterController;
+import com.reactivechat.broadcast.BroadcasterService;
 import com.reactivechat.contact.Contact;
 import com.reactivechat.group.GroupRepository;
 import com.reactivechat.group.model.Group;
@@ -28,27 +28,27 @@ import static com.reactivechat.message.message.MessageType.CONTACTS_LIST;
 import static com.reactivechat.message.message.MessageType.NEW_CONTACT_REGISTERED;
 
 @Service
-public class ChatMessageControllerImpl implements ChatMessageController {
+public class ChatMessageServiceImpl implements ChatMessageService {
     
-    private static final Logger LOGGER = LoggerFactory.getLogger(ChatMessageControllerImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChatMessageServiceImpl.class);
 
     private final ExecutorService executorService;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
     private final MessageRepository messageRepository;
-    private final BroadcasterController broadcasterController;
+    private final BroadcasterService broadcasterService;
     
-    public ChatMessageControllerImpl(final ExecutorService executorService,
-                                     final UserRepository userRepository,
-                                     final GroupRepository groupRepository,
-                                     final MessageRepository messageRepository,
-                                     final BroadcasterController broadcasterController) {
+    public ChatMessageServiceImpl(final ExecutorService executorService,
+                                  final UserRepository userRepository,
+                                  final GroupRepository groupRepository,
+                                  final MessageRepository messageRepository,
+                                  final BroadcasterService broadcasterService) {
         
         this.executorService = executorService;
         this.userRepository = userRepository;
         this.groupRepository = groupRepository;
         this.messageRepository = messageRepository;
-        this.broadcasterController = broadcasterController;
+        this.broadcasterService = broadcasterService;
     }
     
     @Override
@@ -75,7 +75,7 @@ public class ChatMessageControllerImpl implements ChatMessageController {
                 ResponseMessage<ChatMessage> responseMessage = new ResponseMessage<>(MessageType.USER_MESSAGE, chatMessage);
                 
                 messageRepository.insert(chatMessage);
-                broadcasterController.broadcastChatMessage(chatSession, responseMessage);
+                broadcasterService.broadcastChatMessage(chatSession, responseMessage);
                 
             })
             .publishOn(Schedulers.fromExecutorService(executorService))
@@ -100,7 +100,7 @@ public class ChatMessageControllerImpl implements ChatMessageController {
                     .payload(contacts)
                     .build();
     
-                broadcasterController.broadcastToSession(chatSession, responseMessage);
+                broadcasterService.broadcastToSession(chatSession, responseMessage);
                 
             });
 
@@ -115,7 +115,7 @@ public class ChatMessageControllerImpl implements ChatMessageController {
             .payload(Collections.singletonList(contact))
             .build();
     
-        broadcasterController.broadcastToAllExceptSession(chatSession, responseMessage);
+        broadcasterService.broadcastToAllExceptSession(chatSession, responseMessage);
         
     }
     
@@ -140,7 +140,7 @@ public class ChatMessageControllerImpl implements ChatMessageController {
                         .build())
                     .build();
     
-                broadcasterController.broadcastToSession(chatSession, responseMessage);
+                broadcasterService.broadcastToSession(chatSession, responseMessage);
     
             });
         

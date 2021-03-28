@@ -4,27 +4,27 @@ import com.reactivechat.message.message.ChatMessage;
 import com.reactivechat.message.message.ChatMessage.DestinationType;
 import com.reactivechat.message.message.Message;
 import com.reactivechat.message.message.ResponseMessage;
-import com.reactivechat.session.session.ChatSession;
 import com.reactivechat.session.SessionRepository;
+import com.reactivechat.session.session.ChatSession;
 import java.util.concurrent.ExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
-@Controller
-public class BroadcasterControllerImpl implements BroadcasterController {
+@Service
+public class BroadcasterServiceImpl implements BroadcasterService {
     
-    private static final Logger LOGGER = LoggerFactory.getLogger(BroadcasterControllerImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BroadcasterServiceImpl.class);
     
     private final ExecutorService executorService;
     private final SessionRepository sessionRepository;
     
     @Autowired
-    public BroadcasterControllerImpl(final ExecutorService executorService,
-                                     final SessionRepository sessionRepository) {
+    public BroadcasterServiceImpl(final ExecutorService executorService,
+                                  final SessionRepository sessionRepository) {
         
         this.executorService = executorService;
         this.sessionRepository = sessionRepository;
@@ -68,14 +68,9 @@ public class BroadcasterControllerImpl implements BroadcasterController {
     
     @Override
     public void broadcastToUser(final String userId, final Message chatMessage) {
-        
         // TODO: find a mapping between server session and stored session in order to find user
         // TODO: current behavior lists all reauthentications of the user
-        
-        final Flux<ChatSession> sessions = sessionRepository
-            .findByUser(userId);
-    
-        broadcast(sessions, chatMessage);
+        broadcast(sessionRepository.findByUser(userId), chatMessage);
     }
     
     @Override
@@ -87,16 +82,21 @@ public class BroadcasterControllerImpl implements BroadcasterController {
     
         sessions
             .publishOn(Schedulers.fromExecutorService(executorService))
-            .subscribe(session -> {
+            .subscribe(chatSession -> {
                 try {
-                    if (session.isOpen()) {
-                        session.getWebSocketSession().getBasicRemote().sendObject(message);
+                    if (chatSession.isOpen()) {
+                        
+                        chatSession
+                            .getWebSocketSession()
+                            .getBasicRemote()
+                            .sendObject(message);
+                        
                     } else {
-                        sessionRepository.deleteConnection(session.getConnectionId());
-                        LOGGER.error("Can't send message to session {} because session is not opened", session.getId());
+                        sessionRepository.deleteSession(chatSession);
+                        LOGGER.error("Can't send message to session {} because session is not opened", chatSession.getId());
                     }
                 } catch (Exception e) {
-                    LOGGER.error("Error occurred while sending message to session {}. Reason: {}", session.getId(), e.getMessage());
+                    LOGGER.error("Error occurred while sending message to session {}. Reason: {}", chatSession.getId(), e.getMessage());
                 }
             });
      

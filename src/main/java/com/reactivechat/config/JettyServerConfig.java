@@ -1,12 +1,7 @@
 package com.reactivechat.config;
 
-import com.reactivechat.session.AuthenticationController;
-import com.reactivechat.message.ChatMessageController;
-import com.reactivechat.server.ServerMessageControllerImpl;
 import com.reactivechat.session.session.ServerDetails;
-import com.reactivechat.jetty.JettyEmbeddedWebSocketServer;
-import com.reactivechat.jetty.ServerEndpointConfigurator;
-import com.reactivechat.websocket.ChatEndpoint;
+import com.reactivechat.websocket.ChatEndpointController;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -22,27 +17,12 @@ public class JettyServerConfig {
             .serverInstanceId(UUID.randomUUID().toString())
             .build();
     }
-    
-    @Bean
-    public ChatEndpoint chatEndpoint(final AuthenticationController authenticationController,
-                                     final ChatMessageController chatMessageController,
-                                     final ServerMessageControllerImpl clientServerMessageController) {
-        
-        return new ChatEndpoint(authenticationController, chatMessageController, clientServerMessageController);
-    }
-    
+
     @Bean("webSocketEndpointsMap")
-    public Map<Class<?>, Object> webSocketEndpointsMap(final ChatEndpoint chatEndpoint) {
+    public Map<Class<?>, Object> webSocketEndpointsMap(final ChatEndpointController chatEndpointController) {
         return new HashMap<Class<?>, Object>() {{
-            put(chatEndpoint.getClass(), chatEndpoint);
+            put(chatEndpointController.getClass(), chatEndpointController);
         }};
     }
-    
-    @Bean
-    public JettyEmbeddedWebSocketServer jettyWebSocketServer(final ServerEndpointConfigurator serverEndpointConfigurator) {
-        JettyEmbeddedWebSocketServer webSocketServer = new JettyEmbeddedWebSocketServer(serverEndpointConfigurator);
-        webSocketServer.start();
-        return webSocketServer;
-    }
-    
+
 }
