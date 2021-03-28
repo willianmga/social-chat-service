@@ -42,17 +42,18 @@ public class MongoSessionRepository implements SessionRepository {
     @Override
     public Mono<Boolean> createSession(final ChatSession chatSession) {
         return Mono.just(
-            chatSessionsMap
-                .put(buildConnectionId(chatSession), chatSession) != null
-        );
+                chatSessionsMap
+                    .put(chatSession.getSessionId(), chatSession) == null
+            );
     }
     
     @Override
-    public Mono<Boolean> deleteSession(final ChatSession chatSession) {
+    public Mono<Void> deleteSession(final ChatSession chatSession) {
         return Mono.just(
-            chatSessionsMap
-                .remove(buildConnectionId(chatSession)) != null
-        );
+                chatSessionsMap
+                    .remove(chatSession.getSessionId())
+            )
+            .then();
     }
     
     @Override
@@ -62,19 +63,13 @@ public class MongoSessionRepository implements SessionRepository {
                     .find(and(eq(USER_ID, userId), eq(SESSION_STATUS, AUTHENTICATED_STATUS)))
                     .projection(SERVER_REQUIRED_FIELDS)
             )
-            .filter(session -> chatSessionsMap.containsKey(buildConnectionId(session)))
-            .flatMap(session -> Mono.just(chatSessionsMap.get(buildConnectionId(session))));
+            .filter(session -> chatSessionsMap.containsKey(session.getSessionId()))
+            .flatMap(session -> Mono.just(chatSessionsMap.get(session.getSessionId())));
     }
 
     @Override
     public Flux<ChatSession> findAllConnections() {
         return Flux.fromIterable(chatSessionsMap.values());
-    }
-    
-    private String buildConnectionId(final ChatSession chatSession) {
-        return chatSession.getUserAuthenticationDetails().getUserId() + "-" +
-            chatSession.getId() + "-" +
-            chatSession.getConnectionId();
     }
 
 }

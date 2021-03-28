@@ -33,7 +33,7 @@ public class ServerMessageServiceImpl implements ServerMessageService {
                 if (result) {
                     LOGGER.info("Connection opened: {}", chatSession.getConnectionId());
                 } else {
-                    LOGGER.error("Failed to open connection: {}", chatSession.getConnectionId());
+                    LOGGER.error("Current connection replaced existing connection: {}", chatSession.getConnectionId());
                 }
                 sendServerMessage(chatSession, MessageType.CONNECTED);
             });
@@ -43,11 +43,7 @@ public class ServerMessageServiceImpl implements ServerMessageService {
     public void handleDisconnected(final ChatSession chatSession) {
         sessionRepository.deleteSession(chatSession)
             .subscribe((result) -> {
-               if (result) {
-                   LOGGER.info("Connection {} successfully closed and deleted", chatSession.getConnectionId());
-               } else {
-                   LOGGER.error("Failed to delete closed connection {}", chatSession.getConnectionId());
-               }
+                LOGGER.info("Connection {} successfully closed and deleted", chatSession.getConnectionId());
             });
     }
     

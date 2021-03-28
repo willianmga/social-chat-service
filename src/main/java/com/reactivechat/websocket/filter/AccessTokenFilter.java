@@ -1,5 +1,6 @@
 package com.reactivechat.websocket.filter;
 
+import com.reactivechat.SpringContext;
 import com.reactivechat.core.ValidateTokenServerResponse;
 import com.reactivechat.exception.ResponseStatus;
 import com.reactivechat.session.session.UserAuthenticationDetails;
@@ -22,10 +23,13 @@ import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
-import org.eclipse.jetty.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
 /**
@@ -34,6 +38,7 @@ import reactor.core.publisher.Mono;
 @WebFilter("/chat/*")
 public class AccessTokenFilter implements Filter {
     
+    private static final Logger LOGGER = LoggerFactory.getLogger(AccessTokenFilter.class);
     private static final String TOKEN_NOT_PRESENT_ERROR = "Access token must be provided";
     private static final String TOKEN_EXPIRED_ERROR = "Access token provided is expired";
     private static final String TOKEN_INVALID_ERROR = "Access token provided is invalid";
@@ -41,10 +46,12 @@ public class AccessTokenFilter implements Filter {
     private static final String AUTH_SEVER_URL = "social.chat.auth.service.url";
     private static final String B_COOKIE = "b";
     
-    //private final Environment environment;
+    private final String socialChatAuthUrl;
     
     public AccessTokenFilter() {
-        ///this.environment = ContextLoader.getCurrentWebApplicationContext().getBean(Environment.class);
+        this.socialChatAuthUrl = SpringContext
+            .getBean(Environment.class)
+            .getRequiredProperty(AUTH_SEVER_URL);
     }
     
     @Override
@@ -58,24 +65,27 @@ public class AccessTokenFilter implements Filter {
     
         if (bTokenOpt.isPresent()) {
     
-            final String token = bTokenOpt.get();
-            final ResponseEntity<ValidateTokenServerResponse> tokenResponse = validateToken(token)
-                .block();
+            try {
     
-            if (tokenResponse != null && HttpStatus.isSuccess(tokenResponse.getStatusCodeValue()) &&
-                tokenResponse.getBody() != null && ResponseStatus.SUCCESS.equals(tokenResponse.getBody().getStatus())) {
+                final String token = bTokenOpt.get();
+                final ValidateTokenServerResponse tokenResponse = validateToken(token).block();
+    
+                if (tokenResponse != null && ResponseStatus.SUCCESS.equals(tokenResponse.getStatus())) {
+                    handleSuccess(servletResponse, filterChain, request, token, tokenResponse);
+                } else {
+                    handleServerError(response);
+                }
                 
-                handleSuccess(servletResponse, filterChain, request, token, tokenResponse.getBody());
-            } else {
-                handleError(response, tokenResponse);
+            } catch (WebClientResponseException e) {
+                handleError(response, e.getRawStatusCode());
             }
-    
+
         } else {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, TOKEN_NOT_PRESENT_ERROR);
+            handleTokenNotPresent(response);
         }
     
     }
-    
+
     @Override
     public void init(FilterConfig filterConfig) {}
     
@@ -97,32 +107,45 @@ public class AccessTokenFilter implements Filter {
             .build();
         
         filterChain.doFilter(new AuthenticatedRequest(request, loggedInUser), servletResponse);
+    
+        LOGGER.info("Connection accepted from session {}", tokenResponse.getSessionId());
     }
     
     private void handleError(final HttpServletResponse response,
-                             final ResponseEntity<ValidateTokenServerResponse> responseEntity) throws IOException {
+                             int responseStatusCode) throws IOException {
         
-        if (responseEntity != null && responseEntity.getStatusCodeValue() == 403) {
+        if (responseStatusCode == 403) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, TOKEN_EXPIRED_ERROR);
-        } else if (responseEntity != null && responseEntity.getStatusCodeValue() == 401) {
+            LOGGER.error("Connection rejected due to expired token. Status {}", responseStatusCode);
+        } else if (responseStatusCode == 401) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, TOKEN_INVALID_ERROR);
+            LOGGER.error("Connection rejected due to invalid token. Status {}", responseStatusCode);
         } else {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, SERVER_ERROR);
+            handleServerError(response);
         }
+    
     }
-
-    private Mono<ResponseEntity<ValidateTokenServerResponse>> validateToken(final String token) {
-        
-        WebClient.builder()
-            .build();
-        
-        return WebClient.create()
+    
+    private void handleTokenNotPresent(HttpServletResponse response) throws IOException {
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, TOKEN_NOT_PRESENT_ERROR);
+        LOGGER.error("Connection rejected due to token not present. Status 401");
+    }
+    
+    private void handleServerError(HttpServletResponse response) throws IOException {
+        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, SERVER_ERROR);
+        LOGGER.error("Connection rejected due to server error. Status 500");
+    }
+    
+    private Mono<ValidateTokenServerResponse> validateToken(final String token) {
+        return WebClient.builder()
+            .baseUrl(socialChatAuthUrl)
+            .build()
             .post()
-            //.uri(environment.getProperty(AUTH_SEVER_URL) + "/v1/auth/token/valid")
-            .uri("https://dev-server.com/api/v1/auth/token/valid")
+            .uri("/v1/auth/token/valid")
             .header(HttpHeaders.AUTHORIZATION, token)
+            .accept(MediaType.APPLICATION_JSON)
             .retrieve()
-            .toEntity(ValidateTokenServerResponse.class);
+            .bodyToMono(ValidateTokenServerResponse.class);
     }
 
     private Optional<String> getBToken(final HttpServletRequest request) {

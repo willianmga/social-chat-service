@@ -43,6 +43,18 @@ public class ChatSession {
     }
     
     @BsonIgnore
+    public String getSessionId() {
+        
+        if (webSocketSession != null) {
+            return userAuthenticationDetails.getUserId() + "-" +
+                id + "-" +
+                webSocketSession.getId();
+        }
+        
+        throw new IllegalStateException("Session ID could not be built");
+    }
+    
+    @BsonIgnore
     public boolean isOpen() {
         return webSocketSession != null &&
             webSocketSession.isOpen();
