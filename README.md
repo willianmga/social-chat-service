@@ -33,7 +33,7 @@ Reactive WebSocket server which implements the chat domain and handles the messa
 * CHAT_MONGO_DATABASE
 * CHAT_MONGO_CONNECTION_STRING
 
-## Todo:
+## TODO:
 * Implement a encrypter/decryper to protect sensetive data such as passwords
 * Group and Contact mapping to User so that a user talks only to whom he wants
 * Move from Maven to Gradle
