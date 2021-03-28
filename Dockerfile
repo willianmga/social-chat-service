@@ -16,4 +16,6 @@ ENV CHAT_MONGO_CONNECTION_STRING=mongodb://%s:%s@%s/%s
 ENV CHAT_MONGO_DATABASE=socialchat
 ENV CHAT_MONGO_AUTH_DATABASE=admin
 
-CMD java -jar social-chat-service.jar
+CMD java -jar social-chat-service.jar \
+--spring.profiles.active=prod \
+--server.port=$PORT
