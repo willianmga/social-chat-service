@@ -2,9 +2,9 @@ FROM openjdk:8-jdk-alpine
 
 LABEL maintainer="willian.azevedo (willian-mga@hotmail.com)"
 
-ADD target/reactive-chat-back.jar /opt/chat/reactive-chat-back.jar
+ADD target/social-chat-service.jar /opt/socialchat/social-chat-service.jar
 
-WORKDIR /opt/chat
+WORKDIR /opt/socialchat
 
 EXPOSE 8080
 
@@ -16,4 +16,4 @@ ENV CHAT_MONGO_CONNECTION_STRING=mongodb://%s:%s@%s/%s
 ENV CHAT_MONGO_DATABASE=socialchat
 ENV CHAT_MONGO_AUTH_DATABASE=admin
 
-CMD java -jar reactive-chat-back.jar
+CMD java -jar social-chat-service.jar

@@ -1,4 +1,4 @@
-# Reactive Chat Server
+# Social Chat Service
 
 Reactive WebSocket server which implements the chat domain and handles the messages sent by the front-end client. 
 
@@ -17,11 +17,11 @@ Reactive WebSocket server which implements the chat domain and handles the messa
 * Maven
 
 ## LIVE TEST INSTANCE
-* WebSocket: wss://reactive-chat-back.herokuapp.com/chat
+* WebSocket: wss://www.socialchat.live/ws
 
 ## FRONT-END
 * Live client: www.socialchat.live
-* Repository: https://github.com/willianmga/reactive-chat-front
+* Repository: https://github.com/willianmga/social-chat-front
 
 ## TODO:
 * Implement a encrypter/decryper to protect sensetive data such as passwords
