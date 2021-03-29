@@ -9,7 +9,6 @@ import com.mongodb.reactivestreams.client.MongoDatabase;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -31,32 +30,25 @@ public class MongoConfig {
     private Environment environment;
     
     @Bean
-    public MongoDatabase mongoDatabase(final MongoClient mongoClient,
-                                       @Value("${mongo.chat.database}") String mongoDatabase) {
-        
-        return mongoClient.getDatabase(environment.getProperty(CHAT_MONGO_DATABASE, mongoDatabase));
+    public MongoDatabase mongoDatabase(final MongoClient mongoClient) {
+        return mongoClient
+            .getDatabase(getEnvOrLocalProperty(CHAT_MONGO_DATABASE, "mongo.chat.database"));
     }
     
     @Bean
-    public MongoClient mongoClient(CodecRegistry codecRegistry,
-                                   @Value("${mongo.server}") String mongoServer,
-                                   @Value("${mongo.username}") String mongoUsername,
-                                   @Value("${mongo.password}") String mongoPassword,
-                                   @Value("${mongo.connection.string}") String mongoConnectionString,
-                                   @Value("${mongo.auth.database}") String mongoAuthDatabase,
-                                   @Value("${mongo.chat.database}") String mongoChatDatabase) {
-    
-        final String server = environment.getProperty(CHAT_MONGO_SERVER, mongoServer);
-        final String username = environment.getProperty(CHAT_MONGO_USERNAME, mongoUsername);
-        final String password = environment.getProperty(CHAT_MONGO_PASSWORD, mongoPassword);
-        final String authDatabase = environment.getProperty(CHAT_MONGO_AUTH_DATABASE, mongoAuthDatabase);
-        final String chatDatabase = environment.getProperty(CHAT_MONGO_DATABASE, mongoChatDatabase);
-        final String connection = environment.getProperty(CHAT_MONGO_CONNECTION_STRING, mongoConnectionString);
+    public MongoClient mongoClient(CodecRegistry codecRegistry) {
+        
+        final String server = getEnvOrLocalProperty(CHAT_MONGO_SERVER, "mongo.server");
+        final String username = getEnvOrLocalProperty(CHAT_MONGO_USERNAME, "mongo.username");
+        final String password = getEnvOrLocalProperty(CHAT_MONGO_PASSWORD, "mongo.password");
+        final String authDatabase = getEnvOrLocalProperty(CHAT_MONGO_AUTH_DATABASE, "mongo.auth.database");
+        final String chatDatabase = getEnvOrLocalProperty(CHAT_MONGO_DATABASE, "mongo.chat.database");
+        final String connection = getEnvOrLocalProperty(CHAT_MONGO_CONNECTION_STRING, "mongo.connection.string");
         final String connectionString = String.format(connection, username, password, server, chatDatabase);
         
         final MongoCredential credential = MongoCredential
             .createCredential(username, authDatabase, password.toCharArray());
-    
+        
         final MongoClientSettings mongoClientSettings = MongoClientSettings.builder()
             .credential(credential)
             .codecRegistry(codecRegistry)
@@ -64,6 +56,13 @@ public class MongoConfig {
             .build();
         
         return MongoClients.create(mongoClientSettings);
+    }
+    
+    public String getEnvOrLocalProperty(final String envName, final String propertyName) {
+        final String env = environment.getProperty(envName);
+        return (env != null)
+            ? env
+            : environment.getProperty(propertyName);
     }
     
     @Bean
