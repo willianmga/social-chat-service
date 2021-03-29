@@ -1,9 +1,5 @@
 package live.socialchat.chat.websocket.filter;
 
-import live.socialchat.chat.SpringContext;
-import live.socialchat.chat.core.ValidateTokenServerResponse;
-import live.socialchat.chat.exception.ResponseStatus;
-import live.socialchat.chat.session.session.UserAuthenticationDetails;
 import java.io.IOException;
 import java.nio.file.attribute.UserPrincipal;
 import java.security.Principal;
@@ -19,6 +15,10 @@ import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import live.socialchat.chat.SpringContext;
+import live.socialchat.chat.core.ValidateTokenServerResponse;
+import live.socialchat.chat.exception.ResponseStatus;
+import live.socialchat.chat.session.session.UserAuthenticationDetails;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -45,14 +45,6 @@ public class AccessTokenFilter implements Filter {
     private static final String SERVER_ERROR = "A server error occuried";
     private static final String AUTH_SEVER_URL = "social.chat.auth.service.url";
     private static final String B_COOKIE = "b";
-    
-    private final String socialChatAuthUrl;
-    
-    public AccessTokenFilter() {
-        this.socialChatAuthUrl = SpringContext
-            .getBean(Environment.class)
-            .getRequiredProperty(AUTH_SEVER_URL);
-    }
     
     @Override
     public void doFilter(ServletRequest servletRequest,
@@ -138,7 +130,7 @@ public class AccessTokenFilter implements Filter {
     
     private Mono<ValidateTokenServerResponse> validateToken(final String token) {
         return WebClient.builder()
-            .baseUrl(socialChatAuthUrl)
+            .baseUrl(getSocialChatAuthUrl())
             .build()
             .post()
             .uri("/v1/auth/token/valid")
@@ -159,7 +151,13 @@ public class AccessTokenFilter implements Filter {
 
         return Optional.empty();
     }
-
+    
+    private String getSocialChatAuthUrl() {
+        return SpringContext
+            .getBean(Environment.class)
+            .getRequiredProperty(AUTH_SEVER_URL);
+    }
+    
     private static class AuthenticatedRequest extends HttpServletRequestWrapper {
         
         private final LoggedInUser loggedInUser;
