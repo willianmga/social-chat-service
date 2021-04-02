@@ -1,12 +1,12 @@
 package live.socialchat.chat.broadcast;
 
+import java.util.concurrent.ExecutorService;
 import live.socialchat.chat.message.message.ChatMessage;
 import live.socialchat.chat.message.message.ChatMessage.DestinationType;
 import live.socialchat.chat.message.message.Message;
 import live.socialchat.chat.message.message.ResponseMessage;
 import live.socialchat.chat.session.SessionRepository;
 import live.socialchat.chat.session.session.ChatSession;
-import java.util.concurrent.ExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +14,10 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
+/**
+ * Broadcaster of messages to online users. Users not online should receive messages via push notification triggered by
+ * the clients.
+ */
 @Service
 public class BroadcasterServiceImpl implements BroadcasterService {
     
@@ -56,10 +60,8 @@ public class BroadcasterServiceImpl implements BroadcasterService {
     @Override
     public void broadcastToAllExceptSession(final ChatSession chatSession,
                                             final Message message) {
-        
-        // TODO: check why new contact message isn't being sent.
-        
-        final Flux<ChatSession> sessions = sessionRepository.findAllConnections()
+
+        final Flux<ChatSession> sessions = sessionRepository.findAllActiveSessions()
             .filter(session -> !session.getConnectionId().equals(chatSession.getConnectionId()));
     
         broadcast(sessions, message);
@@ -68,9 +70,7 @@ public class BroadcasterServiceImpl implements BroadcasterService {
     
     @Override
     public void broadcastToUser(final String userId, final Message chatMessage) {
-        // TODO: find a mapping between server session and stored session in order to find user
-        // TODO: current behavior lists all reauthentications of the user
-        broadcast(sessionRepository.findByUser(userId), chatMessage);
+        broadcast(sessionRepository.findAllActiveSessionsByUser(userId), chatMessage);
     }
     
     @Override
@@ -86,10 +86,14 @@ public class BroadcasterServiceImpl implements BroadcasterService {
                 try {
                     if (chatSession.isOpen()) {
                         
-                        chatSession
-                            .getWebSocketSession()
-                            .getBasicRemote()
-                            .sendObject(message);
+                        if (chatSession.isLocal()) {
+                            chatSession
+                                .getWebSocketSession()
+                                .getBasicRemote()
+                                .sendObject(message);
+                        } else {
+                            LOGGER.info("Can't handle remote session. Operation not supported");
+                        }
                         
                     } else {
                         sessionRepository.deleteSession(chatSession);

@@ -27,9 +27,6 @@ public class ChatSession {
     private final ServerDetails serverDetails;
     private final UserAuthenticationDetails userAuthenticationDetails;
 
-    // TODO: add ConnectionType LOCAL and REMOTE in order to destinguish between sessions connected on this
-    // server instance or in another
-    
     @BsonCreator
     public ChatSession(@BsonProperty("id") String id,
                        @BsonProperty("connectionId") String connectionId,
@@ -60,6 +57,21 @@ public class ChatSession {
             webSocketSession.isOpen();
     }
     
+    @BsonIgnore
+    public boolean isLocal() {
+        return webSocketSession != null;
+    }
+    
+    @BsonIgnore
+    public ChatSessionBuilder from() {
+        return ChatSession.builder()
+            .id(id)
+            .connectionId(connectionId)
+            .userAuthenticationDetails(userAuthenticationDetails)
+            .serverDetails(serverDetails)
+            .webSocketSession(webSocketSession);
+    }
+    
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -76,5 +88,5 @@ public class ChatSession {
     public int hashCode() {
         return Objects.hash(id);
     }
-
+    
 }

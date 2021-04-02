@@ -2,9 +2,14 @@ package live.socialchat.chat.session;
 
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
-import live.socialchat.chat.session.session.ChatSession;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
+import java.util.stream.IntStream;
+import live.socialchat.chat.session.session.ChatSession;
 import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -13,6 +18,7 @@ import reactor.core.publisher.Mono;
 
 import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.gte;
 import static com.mongodb.client.model.Projections.fields;
 import static com.mongodb.client.model.Projections.include;
 
@@ -26,6 +32,7 @@ public class MongoSessionRepository implements SessionRepository {
     private static final String USER_ID = USER_AUTHENTICATION_DETAILS + ".userId";
     private static final String SESSION_STATUS = "status";
     private static final String SESSION_TYPE = "type";
+    private static final String EXPIRY_DATE = "expiryDate";
     private static final String AUTHENTICATED_STATUS = "AUTHENTICATED";
     private static final Bson SERVER_REQUIRED_FIELDS =
         fields(include("id", CONNECTION_ID, SERVER_DETAILS, USER_AUTHENTICATION_DETAILS, SESSION_STATUS, SESSION_TYPE));
@@ -55,21 +62,63 @@ public class MongoSessionRepository implements SessionRepository {
             )
             .then();
     }
+
+    @Override
+    public Flux<ChatSession> findAllActiveSessions() {
+    
+        final Bson activeSessionsFilter = and(
+            eq(SESSION_STATUS, AUTHENTICATED_STATUS),
+            gte(EXPIRY_DATE, OffsetDateTime.now().toString())
+        );
+    
+        return findAllSessions(activeSessionsFilter);
+    }
     
     @Override
-    public Flux<ChatSession> findByUser(final String userId) {
+    public Flux<ChatSession> findAllActiveSessionsByUser(final String userId) {
+        
+        final Bson userActiveSessionsFilter = and(
+            eq(USER_ID, userId),
+            eq(SESSION_STATUS, AUTHENTICATED_STATUS),
+            gte(EXPIRY_DATE, OffsetDateTime.now().toString())
+        );
+        
+        return findAllSessions(userActiveSessionsFilter);
+    }
+    
+    private Flux<ChatSession> findAllSessions(final Bson filters) {
+    
+        final List<ChatSession> localChatSessions = new ArrayList<>(chatSessionsMap.values());
+    
         return Flux.from(
                 mongoCollection
-                    .find(and(eq(USER_ID, userId), eq(SESSION_STATUS, AUTHENTICATED_STATUS)))
+                    .find(filters)
                     .projection(SERVER_REQUIRED_FIELDS)
             )
-            .filter(session -> chatSessionsMap.containsKey(session.getSessionId()))
-            .flatMap(session -> Mono.just(chatSessionsMap.get(session.getSessionId())));
-    }
+            .flatMap(session -> {
+                
+                final OptionalInt chatSessionIndexOpt = IntStream.range(0, localChatSessions.size())
+                    .filter(chatSessionIndex -> sessionAndUserMatches(localChatSessions.get(chatSessionIndex), session))
+                    .findFirst();
+    
+                if (chatSessionIndexOpt.isPresent()) {
+                    final int chatSessionIndex = chatSessionIndexOpt.getAsInt();
+                    final ChatSession chatSession = localChatSessions.get(chatSessionIndex);
+                    localChatSessions.remove(chatSessionIndex);
+                    return Mono.just(chatSession);
+                } else {
+                    return Mono.just(session);
+                }
 
-    @Override
-    public Flux<ChatSession> findAllConnections() {
-        return Flux.fromIterable(chatSessionsMap.values());
+            })
+            .distinct();
     }
-
+    
+    private boolean sessionAndUserMatches(final ChatSession localSession,
+                                          final ChatSession remoteSession) {
+        return localSession.getId().equals(remoteSession.getId()) &&
+            localSession.getUserAuthenticationDetails().getUserId()
+                .equals(remoteSession.getUserAuthenticationDetails().getUserId());
+    }
+    
 }

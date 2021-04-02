@@ -7,6 +7,6 @@ import reactor.core.publisher.Mono;
 public interface SessionRepository {
     Mono<Boolean> createSession(ChatSession chatSession);
     Mono<Void> deleteSession(ChatSession chatSession);
-    Flux<ChatSession> findByUser(String userId);
-    Flux<ChatSession> findAllConnections();
+    Flux<ChatSession> findAllActiveSessions();
+    Flux<ChatSession> findAllActiveSessionsByUser(String userId);
 }

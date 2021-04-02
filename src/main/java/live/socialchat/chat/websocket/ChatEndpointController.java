@@ -1,5 +1,11 @@
 package live.socialchat.chat.websocket;
 
+import javax.websocket.OnClose;
+import javax.websocket.OnError;
+import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
+import javax.websocket.Session;
+import javax.websocket.server.ServerEndpoint;
 import live.socialchat.chat.message.ChatMessageService;
 import live.socialchat.chat.message.message.ChatHistoryRequest;
 import live.socialchat.chat.message.message.ChatMessage;
@@ -13,12 +19,6 @@ import live.socialchat.chat.websocket.decoder.ResponseMessageDecoder;
 import live.socialchat.chat.websocket.encoder.RequestMessageEncoder;
 import live.socialchat.chat.websocket.encoder.ResponseMessageEncoder;
 import live.socialchat.chat.websocket.filter.AccessTokenFilter.LoggedInUser;
-import javax.websocket.OnClose;
-import javax.websocket.OnError;
-import javax.websocket.OnMessage;
-import javax.websocket.OnOpen;
-import javax.websocket.Session;
-import javax.websocket.server.ServerEndpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
