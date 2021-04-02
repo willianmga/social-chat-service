@@ -7,8 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalInt;
-import java.util.stream.IntStream;
+import java.util.stream.Collectors;
 import live.socialchat.chat.session.session.ChatSession;
 import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,54 +70,51 @@ public class MongoSessionRepository implements SessionRepository {
             gte(EXPIRY_DATE, OffsetDateTime.now().toString())
         );
     
-        return findAllSessions(activeSessionsFilter);
+        final List<ChatSession> localChatSessions = new ArrayList<>(chatSessionsMap.values());
+        final Flux<ChatSession> remoteChatSessions = findRemoteChatSessions(activeSessionsFilter, localChatSessions);
+    
+        return Flux.concat(
+            Flux.fromIterable(localChatSessions),
+            remoteChatSessions
+        );
     }
     
     @Override
     public Flux<ChatSession> findAllActiveSessionsByUser(final String userId) {
-        
+    
         final Bson userActiveSessionsFilter = and(
             eq(USER_ID, userId),
             eq(SESSION_STATUS, AUTHENTICATED_STATUS),
             gte(EXPIRY_DATE, OffsetDateTime.now().toString())
         );
         
-        return findAllSessions(userActiveSessionsFilter);
+        final List<ChatSession> userLocalChatSessions = new ArrayList<>(chatSessionsMap.values())
+            .stream()
+            .filter(chatSession -> userId.equals(chatSession.getUserAuthenticationDetails().getUserId()))
+            .collect(Collectors.toList());
+
+        final Flux<ChatSession> userRemoteChatSessions =
+            findRemoteChatSessions(userActiveSessionsFilter, userLocalChatSessions);
+    
+        return Flux.concat(
+            Flux.fromIterable(userLocalChatSessions),
+            userRemoteChatSessions
+        );
     }
     
-    private Flux<ChatSession> findAllSessions(final Bson filters) {
-    
-        final List<ChatSession> localChatSessions = new ArrayList<>(chatSessionsMap.values());
-    
+    private Flux<ChatSession> findRemoteChatSessions(final Bson filters, final List<ChatSession> localChatSessions) {
         return Flux.from(
-                mongoCollection
-                    .find(filters)
+                mongoCollection.find(filters)
                     .projection(SERVER_REQUIRED_FIELDS)
             )
-            .flatMap(session -> {
-                
-                final OptionalInt chatSessionIndexOpt = IntStream.range(0, localChatSessions.size())
-                    .filter(chatSessionIndex -> sessionAndUserMatches(localChatSessions.get(chatSessionIndex), session))
-                    .findFirst();
-    
-                if (chatSessionIndexOpt.isPresent()) {
-                    final int chatSessionIndex = chatSessionIndexOpt.getAsInt();
-                    final ChatSession chatSession = localChatSessions.get(chatSessionIndex);
-                    localChatSessions.remove(chatSessionIndex);
-                    return Mono.just(chatSession);
-                } else {
-                    return Mono.just(session);
-                }
+            .filter(session -> localChatSessions
+                .stream()
+                .noneMatch(localSession ->
+                    session.getId().equals(localSession.getId()) &&
+                        session.getUserAuthenticationDetails().getUserId()
+                            .equals(localSession.getUserAuthenticationDetails().getUserId())
+                )
+            );
+    }
 
-            })
-            .distinct();
-    }
-    
-    private boolean sessionAndUserMatches(final ChatSession localSession,
-                                          final ChatSession remoteSession) {
-        return localSession.getId().equals(remoteSession.getId()) &&
-            localSession.getUserAuthenticationDetails().getUserId()
-                .equals(remoteSession.getUserAuthenticationDetails().getUserId());
-    }
-    
 }
