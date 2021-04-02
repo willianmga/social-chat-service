@@ -1,11 +1,11 @@
 package live.socialchat.chat.websocket.jetty;
 
-import live.socialchat.chat.websocket.filter.AccessTokenFilter;
-import live.socialchat.chat.websocket.ChatEndpointController;
 import java.util.EnumSet;
 import javax.servlet.DispatcherType;
 import javax.websocket.server.ServerEndpointConfig;
 import javax.websocket.server.ServerEndpointConfig.Builder;
+import live.socialchat.chat.websocket.ChatEndpointController;
+import live.socialchat.chat.websocket.filter.AccessTokenFilter;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
@@ -31,13 +31,16 @@ public class JettyEmbeddedWebSocketServer {
     private static final int DEFAULT_SERVER_PORT = 8080;
     
     private final ServerEndpointConfigurator serverEndpointConfigurator;
+    private final AccessTokenFilter accessTokenFilter;
     
-    public JettyEmbeddedWebSocketServer(final ServerEndpointConfigurator serverEndpointConfigurator) {
+    public JettyEmbeddedWebSocketServer(final ServerEndpointConfigurator serverEndpointConfigurator,
+                                        final AccessTokenFilter accessTokenFilter) {
         this.serverEndpointConfigurator = serverEndpointConfigurator;
+        this.accessTokenFilter = accessTokenFilter;
         start();
     }
     
-    public void start() {
+    private void start() {
     
         Server server = new Server();
     
@@ -57,7 +60,7 @@ public class JettyEmbeddedWebSocketServer {
         cors.setInitParameter(CrossOriginFilter.ALLOWED_METHODS_PARAM, "GET,POST,HEAD");
         cors.setInitParameter(CrossOriginFilter.ALLOWED_HEADERS_PARAM, "X-Requested-With,Content-Type,Accept,Origin");
     
-        context.addFilter(AccessTokenFilter.class,"/*", EnumSet.of(DispatcherType.REQUEST));
+        context.addFilter(new FilterHolder(accessTokenFilter),"/*", EnumSet.of(DispatcherType.REQUEST));
         
         try {
             

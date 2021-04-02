@@ -13,22 +13,6 @@ export CURRENT_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.ve
 export SNAPSHOT="-SNAPSHOT"
 export RELEASE_VERSION=${CURRENT_VERSION%$SNAPSHOT}
 
-# Package the jar
-
-mvn clean package || { echo 'Failed to build project. Exiting.' ; exit 1; }
-
-# Build, tag and push docker image
-
-#docker login login --username=$DOCKER_HUB_USERNAME --password $DOCKER_HUB_TOKEN || { echo 'Failed to login to docker hub. Exiting.' ; exit 1; }
-
-docker build -t $APPNAME:$RELEASE_VERSION -t $APPNAME:latest .
-
-docker tag $APPNAME:$RELEASE_VERSION $DOCKER_HUB_REPO/$APPNAME:$RELEASE_VERSION
-docker tag $APPNAME:latest $DOCKER_HUB_REPO/$APPNAME:latest
-
-docker push $DOCKER_HUB_REPO/$APPNAME:$RELEASE_VERSION
-docker push $DOCKER_HUB_REPO/$APPNAME:latest
-
 # Deploys docker image to Heroku
 
 heroku login --username $HEROKU_USERNAME

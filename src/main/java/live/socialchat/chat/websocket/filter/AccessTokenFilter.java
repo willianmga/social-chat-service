@@ -3,6 +3,7 @@ package live.socialchat.chat.websocket.filter;
 import java.io.IOException;
 import java.nio.file.attribute.UserPrincipal;
 import java.security.Principal;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 import javax.servlet.Filter;
@@ -15,7 +16,6 @@ import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
-import live.socialchat.chat.SpringContext;
 import live.socialchat.chat.core.ValidateTokenServerResponse;
 import live.socialchat.chat.exception.ResponseStatus;
 import live.socialchat.chat.session.session.UserAuthenticationDetails;
@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
@@ -35,6 +36,7 @@ import reactor.core.publisher.Mono;
 /**
  * Filter used to authenticate request and create user principal
  */
+@Component
 @WebFilter("/chat/*")
 public class AccessTokenFilter implements Filter {
     
@@ -45,6 +47,12 @@ public class AccessTokenFilter implements Filter {
     private static final String SERVER_ERROR = "A server error occuried";
     private static final String AUTH_SEVER_URL = "social.chat.auth.service.url";
     private static final String B_COOKIE = "b";
+    
+    private final Environment environment;
+    
+    public AccessTokenFilter(final Environment environment) {
+        this.environment = environment;
+    }
     
     @Override
     public void doFilter(ServletRequest servletRequest,
@@ -130,7 +138,7 @@ public class AccessTokenFilter implements Filter {
     
     private Mono<ValidateTokenServerResponse> validateToken(final String token) {
         return WebClient.builder()
-            .baseUrl(getSocialChatAuthUrl())
+            .baseUrl(getAuthServiceUrl())
             .build()
             .post()
             .uri("/v1/auth/token/valid")
@@ -152,10 +160,10 @@ public class AccessTokenFilter implements Filter {
         return Optional.empty();
     }
     
-    private String getSocialChatAuthUrl() {
-        return SpringContext
-            .getBean(Environment.class)
-            .getRequiredProperty(AUTH_SEVER_URL);
+    private String getAuthServiceUrl() {
+        final String authServiceUrl = environment.getRequiredProperty(AUTH_SEVER_URL);
+        Objects.requireNonNull(authServiceUrl, "Couldn't find social-chat-auth-service url");
+        return authServiceUrl;
     }
     
     private static class AuthenticatedRequest extends HttpServletRequestWrapper {
